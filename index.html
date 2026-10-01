@@ -226,6 +226,27 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .res p{margin:6px 0 0;font-size:13.5px;color:var(--ink);opacity:.86}
 .res .ref{margin-top:4px}
 
+/* bilgi kopyalama */
+.cover-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
+.cover-actions .btn{font-size:14px;padding:0 10px}
+.banner{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--r);background:var(--g-bg);margin-bottom:12px}
+.banner p{margin:0;font-size:14px}
+.banner .row{display:flex;gap:8px;flex-wrap:wrap}
+.banner .btn{min-height:40px;font-size:14px}
+.sheet.tall{max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.sheet h3{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.05em;text-transform:uppercase;color:var(--steel);margin:10px 0 2px}
+.chk{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px 10px;align-items:start;padding:8px 2px;border-top:1px solid var(--line)}
+.chk input{width:20px;height:20px;margin:1px 0 0;accent-color:var(--steel)}
+.chk .l{font-size:14px;font-weight:500}
+.chk .v{grid-column:2;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.chk.off{opacity:.5}
+.chk.grp{border-top:0;padding-top:4px}
+.chk.grp .l{font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding-top:6px}
+.chips button{min-height:36px;border-radius:999px;border:1px solid var(--line);background:var(--surface-2);padding:0 12px;font-size:13.5px;font-weight:600}
+.chips button[aria-pressed="true"]{background:var(--steel);border-color:var(--steel);color:var(--bg)}
+.sheet .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:sticky;bottom:calc(-16px - env(safe-area-inset-bottom,0px));background:var(--surface);padding:10px 0 4px;margin-top:6px}
+
 /* rapor (F701-056) */
 .form-id{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:12px 14px;border-radius:var(--r);background:var(--steel);color:var(--bg)}
 .form-id b{font-family:var(--f-display);font-size:22px;letter-spacing:.03em;white-space:nowrap}
@@ -315,6 +336,8 @@ const ICON = {
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
   doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>',
+  pull:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   xls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8.5 12.5l4 5M12.5 12.5l-4 5"/></svg>',
   save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>',
@@ -534,6 +557,11 @@ function renderTab(){
 /* --- kapak --- */
 function coverHTML(){
   const a=S.cur, f=FORM_BY[a.code]; let html="", open=false;
+  const others=othersOf(a);
+  if(others.length && coverEmpty(a)){ const o=others[0];
+    html+=`<div class="banner"><p>Denetim ve enspektör bilgilerini başka bir denetimden alabilirsiniz. En son: <b>${esc(FORM_BY[o.code].code)}</b> · ${esc(o.cover[14]||"enspektör girilmemiş")}${o.cover[10]?" · "+esc(o.cover[10]):""}</p><div class="row"><button class="btn primary" id="quickIn">${ICON.pull}Son denetimden al</button><button class="btn" id="copyIn">Seçerek al…</button></div></div>`; }
+  const showBanner = others.length && coverEmpty(a);
+  html+= showBanner ? "" : `<div class="cover-actions">${others.length?`<button class="btn" id="copyIn2">${ICON.pull}Başka denetimden al</button>`:""}<button class="btn" id="copyOut" ${others.length?"":'style="grid-column:1/-1"'}>${ICON.copy}Diğer denetimlere kopyala</button></div>`;
   f.cover.forEach(x=>{
     if(x.h){ if(open) html+="</div></section>"; html+=`<section class="group"><h2>${esc(x.h.replace(/^\d\.\s*/,""))}</h2><div class="fields">`; open=true; return; }
     const id="cv"+x.row, v=a.cover[x.row]??"";
@@ -899,6 +927,85 @@ async function exportDocx(){
   if(btn){btn.disabled=false; btn.lastChild.textContent="F701-056 raporunu indir (Word)";}
 }
 
+
+/* ================= kapak bilgilerini kopyalama ================= */
+const COPY_GROUPS=[
+  {id:"den",title:"Denetim bilgileri",fields:[7,9,10,11].map(r=>({k:"c"+r,row:r}))},
+  {id:"ens",title:"Denetlenen enspektör",fields:[14,15,16,17].map(r=>({k:"c"+r,row:r}))},
+  {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"r:denetimNo",label:"Denetim No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
+];
+const ALL_FIELDS=COPY_GROUPS.flatMap(g=>g.fields);
+function fLabel(f){ if(f.row){ const x=FORMS[0].cover.find(c=>c.row===f.row); return x?x.label:""; } return f.label; }
+function fGet(a,f,raw){ if(f.row) return a.cover[f.row]||""; const [t,k]=f.k.split(":"); if(t==="t") return a[k]||""; const r=rep(a); if(raw) return r[k]||""; return (k==="lider")?(r[k]||""):(r[k]||""); }
+function fSet(a,f,v){ if(f.row) a.cover[f.row]=v; else { const [t,k]=f.k.split(":"); if(t==="t") a[k]=v; else rep(a)[k]=v; } }
+function fShow(f,v){ return f.row&&DATE_ROWS[f.row]?isoToTr(v):v; }
+function copyInto(src,dst,keys,overwrite){ let n=0; ALL_FIELDS.forEach(f=>{ if(!keys.has(f.k)) return; const v=fGet(src,f); if(!v) return; const cur=fGet(dst,f,true); if(cur===v || (cur && !overwrite)) return; fSet(dst,f,v); n++; }); if(n) dst.updatedAt=Date.now(); return n; }
+function auditLine(a){ const f=FORM_BY[a.code]; return `<b>${esc(f.code)}</b> ${esc(f.name)}<br><span class="num">${[a.cover[14],a.cover[10],isoToTr(a.cover[9])||fmtDate(a.createdAt)].filter(Boolean).map(esc).join(" · ")}</span>`; }
+function othersOf(a){ return S.audits.filter(x=>x.id!==a.id && FORM_BY[x.code]).sort((x,y)=>(y.updatedAt||0)-(x.updatedAt||0)); }
+function coverEmpty(a){ return ![7,10,11,14,15,16].some(r=>(a.cover[r]||"").trim()); }
+
+function fieldsHTML(src,keys){
+  return COPY_GROUPS.map(g=>{ const avail=g.fields.filter(f=>fGet(src,f)); const allOn=avail.length&&avail.every(f=>keys.has(f.k));
+    return `<h3>${esc(g.title)}</h3><label class="chk grp${avail.length?"":" off"}"><input type="checkbox" data-cg="${g.id}" ${allOn?"checked":""} ${avail.length?"":"disabled"}><span class="l">Tümünü seç</span></label>`+
+      g.fields.map(f=>{ const v=fGet(src,f); return `<label class="chk${v?"":" off"}"><input type="checkbox" data-cf="${f.k}" ${v&&keys.has(f.k)?"checked":""} ${v?"":"disabled"}><span class="l">${esc(fLabel(f))}</span><span class="v">${v?esc(fShow(f,v)):"boş"}</span></label>`; }).join(""); }).join("");
+}
+function openSheet(html){ const v=document.createElement("div"); v.className="sheet-back"; v.innerHTML=`<div class="sheet tall" role="dialog">${html}</div>`; document.body.appendChild(v); return v; }
+
+async function openCopyOut(){
+  await flush(); S.audits=await Store.list(); const a=S.audits.find(x=>x.id===S.cur.id)||S.cur;
+  const others=othersOf(a); const keys=new Set(ALL_FIELDS.filter(f=>fGet(a,f)).map(f=>f.k)); const targets=new Set(); const newForms=new Set(); let over=false;
+  const v=openSheet(""); const sh=v.firstElementChild;
+  const draw=()=>{ sh.innerHTML=`<b>Bilgileri diğer denetimlere kopyala</b><span class="muted" style="font-size:13.5px">Kaynak: ${auditLine(a)}</span>
+    ${fieldsHTML(a,keys)}
+    <h3>Mevcut denetimler</h3>${others.length?others.map(o=>`<label class="chk"><input type="checkbox" data-tg="${o.id}" ${targets.has(o.id)?"checked":""}><span class="l">${auditLine(o)}</span></label>`).join(""):`<p class="hint" style="margin:4px 0">Başka kayıtlı denetim yok.</p>`}
+    <h3>Yeni denetim başlat</h3><p class="hint" style="margin:2px 0">Seçilen ekipmanlar için bu bilgilerle yeni denetim açılır.</p>
+    <div class="chips">${FORMS.map(f=>`<button data-nf="${esc(f.code)}" aria-pressed="${newForms.has(f.code)}">${esc(f.code)} ${esc(f.name.replace(/\s*\(.*\)/,""))}</button>`).join("")}</div>
+    <h3>Seçenek</h3><label class="chk"><input type="checkbox" data-ov ${over?"checked":""}><span class="l">Dolu alanların üzerine yaz</span><span class="v">İşaretli değilse hedefte yalnızca boş alanlar doldurulur.</span></label>
+    <div class="btns"><button class="btn" data-x>Vazgeç</button><button class="btn primary" data-go>Kopyala${targets.size+newForms.size?" ("+(targets.size+newForms.size)+")":""}</button></div>`; };
+  draw();
+  v.addEventListener("change",e=>{ const el=e.target, d=el.dataset;
+    if(d.cf){ el.checked?keys.add(d.cf):keys.delete(d.cf); }
+    else if(d.cg){ COPY_GROUPS.find(g=>g.id===d.cg).fields.forEach(f=>{ if(fGet(a,f)) el.checked?keys.add(f.k):keys.delete(f.k); }); }
+    else if(d.tg){ el.checked?targets.add(d.tg):targets.delete(d.tg); }
+    else if(d.ov!==undefined){ over=el.checked; }
+    const y=sh.scrollTop; draw(); sh.scrollTop=y; });
+  v.addEventListener("click",async e=>{ if(e.target===v){ v.remove(); return; } const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.x!==undefined){ v.remove(); return; }
+    if(d.nf){ newForms.has(d.nf)?newForms.delete(d.nf):newForms.add(d.nf); const y=sh.scrollTop; draw(); sh.scrollTop=y; return; }
+    if(d.go!==undefined){
+      if(!keys.size){ toast("Kopyalanacak alan seçin."); return; }
+      if(!targets.size&&!newForms.size){ toast("Hedef denetim veya yeni ekipman seçin."); return; }
+      let changed=0, made=0;
+      for(const id of targets){ const o=S.audits.find(x=>x.id===id); if(o && copyInto(a,o,keys,over)){ await Store.save(o); changed++; } }
+      for(const code of newForms){ const n=newAudit(code); copyInto(a,n,keys,true); await Store.save(n); made++; }
+      S.audits=await Store.list(); v.remove();
+      toast([changed?changed+" denetim güncellendi":"", made?made+" yeni denetim açıldı":"", (!changed&&!made)?"Değişen alan olmadı":""].filter(Boolean).join(", "));
+    } });
+}
+
+async function openCopyIn(srcId){
+  await flush(); S.audits=await Store.list(); const a=S.audits.find(x=>x.id===S.cur.id)||S.cur; S.cur=a;
+  const others=othersOf(a); if(!others.length){ toast("Bilgi alınabilecek başka denetim yok."); return; }
+  let src=others.find(o=>o.id===srcId)||others[0]; let keys=new Set(ALL_FIELDS.filter(f=>fGet(src,f)).map(f=>f.k)); let over=false;
+  const v=openSheet(""); const sh=v.firstElementChild;
+  const draw=()=>{ sh.innerHTML=`<b>Başka denetimden bilgi al</b>
+    <h3>Kaynak denetim</h3>${others.map(o=>`<label class="chk"><input type="radio" name="srcA" data-src="${o.id}" ${o.id===src.id?"checked":""}><span class="l">${auditLine(o)}</span></label>`).join("")}
+    ${fieldsHTML(src,keys)}
+    <h3>Seçenek</h3><label class="chk"><input type="checkbox" data-ov ${over?"checked":""}><span class="l">Bu denetimdeki dolu alanların üzerine yaz</span><span class="v">İşaretli değilse yalnızca boş alanlar doldurulur.</span></label>
+    <div class="btns"><button class="btn" data-x>Vazgeç</button><button class="btn primary" data-go>Bilgileri al</button></div>`; };
+  draw();
+  v.addEventListener("change",e=>{ const el=e.target, d=el.dataset;
+    if(d.src){ src=others.find(o=>o.id===d.src); keys=new Set(ALL_FIELDS.filter(f=>fGet(src,f)).map(f=>f.k)); }
+    else if(d.cf){ el.checked?keys.add(d.cf):keys.delete(d.cf); }
+    else if(d.cg){ COPY_GROUPS.find(g=>g.id===d.cg).fields.forEach(f=>{ if(fGet(src,f)) el.checked?keys.add(f.k):keys.delete(f.k); }); }
+    else if(d.ov!==undefined){ over=el.checked; }
+    const y=sh.scrollTop; draw(); sh.scrollTop=y; });
+  v.addEventListener("click",e=>{ if(e.target===v){ v.remove(); return; } const b=e.target.closest("button"); if(!b) return;
+    if(b.dataset.x!==undefined){ v.remove(); return; }
+    if(b.dataset.go!==undefined){ if(!keys.size){ toast("Alınacak alan seçin."); return; } const n=copyInto(src,S.cur,keys,over); v.remove(); if(n){ touch(); renderTab(); } toast(n?n+" alan dolduruldu":"Değişen alan olmadı (dolu alanlar korunuyor)"); } });
+}
+function quickCopyIn(){ const a=S.cur; const o=othersOf(a)[0]; if(!o) return; const n=copyInto(o,a,new Set(ALL_FIELDS.map(f=>f.k)),false); if(n){ touch(); } renderTab(); toast(n?n+" alan "+FORM_BY[o.code].code+" denetiminden alındı":"Alınacak yeni bilgi yok"); }
+
 /* ================= olaylar ================= */
 document.addEventListener("click",async e=>{
   const t=e.target.closest("button"); if(!t) return;
@@ -922,6 +1029,9 @@ document.addEventListener("click",async e=>{
   if(d.time){ const inp=$("#cv28"); const now=fmtTime(Date.now()); const parts=(inp.value||"").split(/\s*-\s*/); if(d.time==="start") parts[0]=now; else { parts[0]=parts[0]||""; parts[1]=now; } inp.value=parts.filter((x,i)=>i===0||x).join(" - "); S.cur.cover[28]=inp.value; touch(); return; }
   if(d.sonuc){ S.cur.sonuc=(S.cur.sonuc===d.sonuc)?"":d.sonuc; touch(); document.querySelectorAll("[data-sonuc]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sonuc===S.cur.sonuc)); return; }
   if(t.id==="xlsBtn"){ exportXlsx(); return; }
+  if(t.id==="copyOut"){ openCopyOut(); return; }
+  if(t.id==="copyIn"||t.id==="copyIn2"){ openCopyIn(); return; }
+  if(t.id==="quickIn"){ quickCopyIn(); return; }
   if(t.id==="docBtn"){ exportDocx(); return; }
   if(d.rs!==undefined){ const i=+d.rs; const rr=rep(S.cur).rows[i]||(rep(S.cur).rows[i]={}); const au=autoRow(S.cur,i).s; const cur=rr.s||au;
     if(cur===d.v){ rr.s = rr.s ? "" : "-"; } else rr.s = (d.v===au)?"":d.v;
