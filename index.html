@@ -226,6 +226,13 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .res p{margin:6px 0 0;font-size:13.5px;color:var(--ink);opacity:.86}
 .res .ref{margin-top:4px}
 
+/* çoklu enspektör */
+.ens-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.ens-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 6px}
+.ens-h b{font-family:var(--f-display);font-size:16px;letter-spacing:.03em}
+.linkbtn.danger{color:var(--ud)}
+.ens-add{width:100%}
+
 /* bilgi kopyalama */
 .cover-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px}
 .cover-actions .btn{font-size:14px;padding:0 10px}
@@ -563,7 +570,9 @@ function coverHTML(){
   const showBanner = others.length && coverEmpty(a);
   html+= showBanner ? "" : `<div class="cover-actions">${others.length?`<button class="btn" id="copyIn2">${ICON.pull}Başka denetimden al</button>`:""}<button class="btn" id="copyOut" ${others.length?"":'style="grid-column:1/-1"'}>${ICON.copy}Diğer denetimlere kopyala</button></div>`;
   f.cover.forEach(x=>{
+    if(x.h && /^2\./.test(x.h)){ if(open) html+="</div></section>"; open=false; html+=`<section class="group"><h2>${esc(x.h.replace(/^\d\.\s*/,""))}</h2>${ensHTML(a)}</section>`; return; }
     if(x.h){ if(open) html+="</div></section>"; html+=`<section class="group"><h2>${esc(x.h.replace(/^\d\.\s*/,""))}</h2><div class="fields">`; open=true; return; }
+    if(x.row>=14 && x.row<=17) return;
     const id="cv"+x.row, v=a.cover[x.row]??"";
     if(x.row===8){ html+=`<div class="field"><label for="${id}">${esc(x.label)}</label><input id="${id}" value="${esc(v)}" readonly></div>`; return; }
     if(DATE_ROWS[x.row]){ html+=`<div class="field"><label for="${id}">${esc(x.label)}</label><input id="${id}" type="date" data-cv="${x.row}" value="${esc(/^\d{4}-/.test(v)?v:"")}"></div>`; return; }
@@ -716,6 +725,11 @@ async function buildXlsx(a,photos){
   f.cover.forEach(x=>{ if(x.row && x.row!==8){ const v=a.cover[x.row]; if(v) k.getCell("C"+x.row).value=DATE_ROWS[x.row]?isoToTr(v):v; } });
   const pc={}; photos.forEach(p=>pc[p.itemNo]=(pc[p.itemNo]||0)+1);
   allItems(f).forEach(it=>{ const st=a.items[it.no]||{}; if(st.v) c.getCell("E"+it.row).value=st.v; let note=st.note||""; if(pc[it.no]) note+=(note?" ":"")+"[Foto: "+pc[it.no]+" adet – Fotoğraflar sayfası]"; if(note) c.getCell("G"+it.row).value=note; });
+  // Birden fazla enspektör: her alan kendi hücresinde alt alta (ad soyada göre sıralı)
+  { const L=ensSorted(a);
+    if(L.length>1){ ["ad","unvan","ekipnet","yetki"].forEach((kk,i)=>{ const r=14+i, c=k.getCell("C"+r);
+      c.value=L.map(e=>(kk==="yetki"?isoToTr(e[kk]):e[kk])||"–").join("\n");
+      c.alignment=Object.assign({},c.alignment||{},{wrapText:true,vertical:"top"}); k.getRow(r).height=Math.max(18,15*L.length+3); }); } }
   // Denetim No: kapakta Denetim Bilgileri bölümünün son satırı (boş ara satır 12 kullanılır)
   try{
     ["B","C","D","E","F"].forEach(col=>{ k.getCell(col+"12").style=JSON.parse(JSON.stringify(k.getCell(col+"11").style||{})); });
@@ -853,7 +867,7 @@ function repHTML(){
   <section class="group"><h2>Tanık olunan</h2><div class="fields">
     ${fld("alan","Muayene alanı ve muayene türü",{area:true,rows:3})}
     <div class="field"><label class="toggle" for="rp-kg"><input type="checkbox" id="rp-kg" data-repchk="kapsamGen" ${r.kapsamGen?"checked":""}>Kapsam genişletme</label></div>
-    ${info("Muayene personeli",a.cover[14])}
+    ${info("Muayene personeli",ensNames(a,", "))}
     ${fld("std","Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no",{area:true,rows:2})}
   </div></section>
   <section class="group"><h2>Değerlendirme</h2>
@@ -909,7 +923,7 @@ async function buildDocx(a){
   // tanık olunan
   setCell(doc,cellAt(T[3],2,0),repVal(a,"alan"),{sz:18});
   setCell(doc,cellAt(T[3],2,1),r.kapsamGen?"☒":"☐",{center:true,sz:22});
-  setCell(doc,cellAt(T[3],2,2),a.cover[14]||"",{sz:18});
+  setCell(doc,cellAt(T[3],2,2),ensNames(a,"\n")||a.cover[14]||"",{sz:18});
   setCell(doc,cellAt(T[3],2,3),repVal(a,"std"),{sz:18});
   // 15 kriter
   CRITERIA.forEach((_,i)=>{ const e=effRow(a,i); setCell(doc,cellAt(T[4],i+1,2),e.s,{center:true,b:true,sz:20}); setCell(doc,cellAt(T[4],i+1,3),e.c,{sz:16}); });
@@ -937,18 +951,46 @@ async function exportDocx(){
 }
 
 
+
+/* ================= çoklu enspektör ================= */
+const ENS_KEYS=[["ad","Adı Soyadı",""],["unvan","Ünvanı / Mesleği",""],["ekipnet","EKİPNET Kayıt Numarası",""],["yetki","Kuruluş İçi Yetkilendirme Tarihi","date"]];
+function ensList(a){
+  if(!Array.isArray(a.ensp)) a.ensp=[{ad:a.cover[14]||"",unvan:a.cover[15]||"",ekipnet:a.cover[16]||"",yetki:/^\d{4}-\d{2}-\d{2}$/.test(a.cover[17]||"")?a.cover[17]:""}];
+  if(!a.ensp.length) a.ensp.push({ad:"",unvan:"",ekipnet:"",yetki:""});
+  return a.ensp;
+}
+function ensFilled(e){ return !!(e.ad||e.unvan||e.ekipnet||e.yetki); }
+const ensCmp=(x,y)=>{ const A=(x.ad||"").trim(), B=(y.ad||"").trim(); if(!A&&!B) return 0; if(!A) return 1; if(!B) return -1; return A.localeCompare(B,"tr",{sensitivity:"base"}); };
+function ensSorted(a){ return ensList(a).filter(ensFilled).slice().sort(ensCmp); }
+function ensSort(a){ const L=ensList(a); const before=JSON.stringify(L); L.sort(ensCmp); return JSON.stringify(L)!==before; }
+function ensSync(a){
+  const L=ensSorted(a);
+  const j=(k,f)=>{ if(!L.length) return ""; if(L.length===1) return L[0][k]||""; const vals=L.map(e=>e[k]||""); if(vals.every(v=>!v)) return ""; return vals.map(v=>(f?f(v):v)||"–").join(" / "); };
+  a.cover[14]=j("ad"); a.cover[15]=j("unvan"); a.cover[16]=j("ekipnet"); a.cover[17]=L.length>1?j("yetki",isoToTr):j("yetki");
+}
+function ensNames(a,sep){ return ensSorted(a).filter(e=>e.ad).map(e=>e.ad).join(sep||", "); }
+function ensHTML(a){
+  if(ensSort(a)){ ensSync(a); touch(); }
+  const L=ensList(a); const lab=r=>{ const x=FORM_BY[a.code].cover.find(c=>c.row===r); return x?x.label:""; };
+  return `<div class="ens-list">${L.map((e,i)=>`<div class="ens-card"><div class="ens-h"><b>${L.length>1?(i+1)+". enspektör":"Enspektör"}</b>${L.length>1?`<button class="linkbtn danger" data-ensdel="${i}">${S.ensDel===i?"Silmek için tekrar dokunun":"Kaldır"}</button>`:""}</div><div class="fields">${ENS_KEYS.map(([k,label,type],ki)=>`<div class="field"><label for="en-${i}-${k}">${esc(lab(14+ki)||label)}</label><input id="en-${i}-${k}" data-ens="${i}:${k}" ${type?`type="${type}"`:""} value="${esc(e[k]||"")}" autocomplete="off"${k==="ad"?' autocapitalize="words"':""}></div>`).join("")}</div></div>`).join("")}</div>
+  <button class="btn ens-add" id="ensAdd">${ICON.plus}Enspektör ekle</button>${L.length>1?'<p class="hint">Liste ad soyada göre alfabetik sıralanır; Excel ve rapora bu sırayla aktarılır.</p>':""}`;
+}
+function repaintCoverKeep(){ const y=window.scrollY; renderTab(); window.scrollTo(0,y); }
+
 /* ================= kapak bilgilerini kopyalama ================= */
 const COPY_GROUPS=[
   {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"}]},
-  {id:"ens",title:"Denetlenen enspektör",fields:[14,15,16,17].map(r=>({k:"c"+r,row:r}))},
+  {id:"ens",title:"Denetlenen enspektör",fields:[{k:"e:list",label:"Enspektör(ler) – ad, ünvan, EKİPNET, yetkilendirme tarihi"}]},
   {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
 ];
 const ALL_FIELDS=COPY_GROUPS.flatMap(g=>g.fields);
 function fLabel(f){ if(f.row){ const x=FORMS[0].cover.find(c=>c.row===f.row); return x?x.label:""; } return f.label; }
-function fGet(a,f,raw){ if(f.row) return a.cover[f.row]||""; const [t,k]=f.k.split(":"); if(t==="t") return a[k]||""; const r=rep(a); if(raw) return r[k]||""; return (k==="lider")?(r[k]||""):(r[k]||""); }
+function fGet(a,f,raw){ if(f.row) return a.cover[f.row]||""; const [t,k]=f.k.split(":"); if(t==="t") return a[k]||""; if(t==="e") return ensSorted(a).map(e=>e.ad||"(adsız)").join(", "); const r=rep(a); if(raw) return r[k]||""; return (k==="lider")?(r[k]||""):(r[k]||""); }
 function fSet(a,f,v){ if(f.row) a.cover[f.row]=v; else { const [t,k]=f.k.split(":"); if(t==="t") a[k]=v; else rep(a)[k]=v; } }
 function fShow(f,v){ return f.row&&DATE_ROWS[f.row]?isoToTr(v):v; }
-function copyInto(src,dst,keys,overwrite){ let n=0; ALL_FIELDS.forEach(f=>{ if(!keys.has(f.k)) return; const v=fGet(src,f); if(!v) return; const cur=fGet(dst,f,true); if(cur===v || (cur && !overwrite)) return; fSet(dst,f,v); n++; }); if(n) dst.updatedAt=Date.now(); return n; }
+function copyInto(src,dst,keys,overwrite){ let n=0; ALL_FIELDS.forEach(f=>{ if(!keys.has(f.k)) return; const v=fGet(src,f); if(!v) return; const cur=fGet(dst,f,true);
+    if(f.k==="e:list"){ const same=JSON.stringify(ensSorted(src))===JSON.stringify(ensSorted(dst)); if(same || (cur && !overwrite)) return; dst.ensp=JSON.parse(JSON.stringify(ensSorted(src))); ensSync(dst); n++; return; }
+    if(cur===v || (cur && !overwrite)) return; fSet(dst,f,v); n++; }); if(n) dst.updatedAt=Date.now(); return n; }
 function auditLine(a){ const f=FORM_BY[a.code]; return `<b>${esc(f.code)}</b> ${esc(f.name)}<br><span class="num">${[a.cover[14],a.cover[10],isoToTr(a.cover[9])||fmtDate(a.createdAt)].filter(Boolean).map(esc).join(" · ")}</span>`; }
 function othersOf(a){ return S.audits.filter(x=>x.id!==a.id && FORM_BY[x.code]).sort((x,y)=>(y.updatedAt||0)-(x.updatedAt||0)); }
 function coverEmpty(a){ return ![7,10,11,14,15,16].some(r=>(a.cover[r]||"").trim()); }
@@ -1039,6 +1081,8 @@ document.addEventListener("click",async e=>{
   if(d.sonuc){ S.cur.sonuc=(S.cur.sonuc===d.sonuc)?"":d.sonuc; touch(); document.querySelectorAll("[data-sonuc]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sonuc===S.cur.sonuc)); return; }
   if(t.id==="xlsBtn"){ exportXlsx(); return; }
   if(t.id==="copyOut"){ openCopyOut(); return; }
+  if(t.id==="ensAdd"){ const L=ensList(S.cur); L.push({ad:"",unvan:"",ekipnet:"",yetki:""}); S.ensDel=null; touch(); repaintCoverKeep(); const i=document.getElementById("en-"+(L.length-1)+"-ad"); if(i){ i.focus(); i.scrollIntoView({block:"center"}); } return; }
+  if(d.ensdel!==undefined){ const i=+d.ensdel; if(S.ensDel!==i){ S.ensDel=i; repaintCoverKeep(); return; } ensList(S.cur).splice(i,1); S.ensDel=null; ensSync(S.cur); touch(); repaintCoverKeep(); toast("Enspektör kaldırıldı"); return; }
   if(t.id==="copyIn"||t.id==="copyIn2"){ openCopyIn(); return; }
   if(t.id==="quickIn"){ quickCopyIn(); return; }
   if(t.id==="docBtn"){ exportDocx(); return; }
@@ -1061,6 +1105,7 @@ document.addEventListener("input",e=>{
   if(el.id==="homeQ"){ S.hq=el.value; clearTimeout(qT); qT=setTimeout(()=>{ paintHomeRes(); const bar=el.parentElement; const has=bar.querySelector(".clr"); if(S.hq&&!has){ bar.insertAdjacentHTML("beforeend",'<button class="clr" id="homeQClear">Temizle</button>'); } else if(!S.hq&&has) has.remove(); },150); return; }
   if(el.id==="listQ"){ S.q=el.value; clearTimeout(qT); qT=setTimeout(()=>{ $("#itemsBox").innerHTML=itemsBodyHTML(); paintListCount(); const bar=el.parentElement; const has=bar.querySelector(".clr"); if(S.q&&!has){ bar.insertAdjacentHTML("beforeend",'<button class="clr" id="listQClear">Temizle</button>'); } else if(!S.q&&has) has.remove(); },150); return; }
   if(!S.cur) return;
+  if(el.dataset.ens){ const [i,k]=el.dataset.ens.split(":"); const e=ensList(S.cur)[+i]; if(e){ e[k]=el.value; ensSync(S.cur); touch(); } return; }
   if(el.dataset.cv){ S.cur.cover[el.dataset.cv]=el.value; touch(); }
   else if(el.dataset.note){ const no=el.dataset.note; const st=S.cur.items[no]||(S.cur.items[no]={}); st.note=el.value; if(!st.at) st.at=Date.now(); touch();
     const item=el.closest(".item"); const need=item&&item.querySelector(".need"); if(need&&el.value) need.remove(); }
