@@ -204,6 +204,28 @@ tfoot td{font-weight:700;background:var(--surface-2)}
 .confirm{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:var(--r);background:var(--ud-bg);color:var(--ink)}
 .confirm .row{display:flex;gap:8px}
 
+/* arama */
+mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.search-btn{flex:none;width:38px;height:38px;border-radius:999px;border:1px solid var(--line);background:var(--surface);display:inline-flex;align-items:center;justify-content:center}
+.search-btn svg{width:18px;height:18px}
+.search-btn[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.searchbar{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:0 6px 0 12px;min-height:46px}
+.searchbar svg{width:18px;height:18px;color:var(--muted);flex:none}
+.searchbar input{flex:1;min-width:0;border:0;background:transparent;outline:none;padding:10px 0}
+.searchbar input::-webkit-search-cancel-button{display:none}
+.searchbar .clr{border:0;background:var(--surface-2);border-radius:999px;min-height:32px;padding:0 12px;font-size:13px;font-weight:600}
+.searchbar:focus-within{border-color:var(--steel)}
+.sr-count{font-size:13px;color:var(--muted);margin:8px 2px 0}
+.list-search{position:sticky;top:calc(env(safe-area-inset-top,0px) + var(--toph,88px) + 54px);z-index:14;background:var(--bg);padding-block:0 8px}
+.res{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.res .rh{display:flex;gap:8px;align-items:baseline}
+.res .code{font-family:var(--f-display);font-weight:700;color:var(--steel);font-size:14px;white-space:nowrap}
+.res .no{font-family:var(--f-display);font-weight:700;font-size:15px;white-space:nowrap}
+.res .t{font-weight:600;font-size:14.5px;min-width:0}
+.res .fm{font-size:12.5px;color:var(--muted);margin-top:2px}
+.res p{margin:6px 0 0;font-size:13.5px;color:var(--ink);opacity:.86}
+.res .ref{margin-top:4px}
+
 /* rapor (F701-056) */
 .form-id{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:12px 14px;border-radius:var(--r);background:var(--steel);color:var(--bg)}
 .form-id b{font-family:var(--f-display);font-size:22px;letter-spacing:.03em;white-space:nowrap}
@@ -271,6 +293,17 @@ const isoToTr = v => /^\d{4}-\d{2}-\d{2}$/.test(v||"") ? v.slice(8,10)+"."+v.sli
 const uid = () => Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const FORM_BY = Object.fromEntries(FORMS.map(f=>[f.code,f]));
 const STATUSES = ["U","UD","G","KD"];
+/* arama: Türkçe karakter ve büyük/küçük harf duyarsız; uzunluk korunur (vurgulama için) */
+const FOLD={"ç":"c","ğ":"g","ı":"i","ö":"o","ş":"s","ü":"u","â":"a","î":"i","û":"u"};
+function fold(s){ let o=""; for(const ch of String(s??"")){ let c=ch.toLocaleLowerCase("tr"); if(c.length!==ch.length) c=ch.toLowerCase(); if(c.length!==ch.length) c=ch; o+=FOLD[c]||c; } return o; }
+function terms(q){ return fold(q).split(/\s+/).filter(Boolean); }
+function hasAll(text,ts){ const f=fold(text); return ts.every(t=>f.includes(t)); }
+function hl(text,ts){
+  text=String(text??""); if(!ts||!ts.length) return esc(text);
+  const f=fold(text); const m=new Uint8Array(text.length);
+  ts.forEach(t=>{ let i=0; while((i=f.indexOf(t,i))>=0){ m.fill(1,i,i+t.length); i+=t.length; } });
+  let out="",i=0; while(i<text.length){ let j=i; while(j<text.length&&m[j]===m[i]) j++; const seg=esc(text.slice(i,j)); out+=m[i]?"<mark>"+seg+"</mark>":seg; i=j; } return out;
+}
 const DATE_ROWS = {9:true,17:true};
 const ICON = {
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
@@ -281,6 +314,7 @@ const ICON = {
   cam:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 012-2h2l2-2h6l2 2h2a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/><circle cx="12" cy="13" r="3.5"/></svg>',
   note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16v4z"/></svg>',
   doc:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>',
+  search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   xls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8.5 12.5l4 5M12.5 12.5l-4 5"/></svg>',
   save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>',
@@ -387,7 +421,7 @@ const Store = {
 };
 
 /* ================= durum ================= */
-const S = { view:"home", audits:[], cur:null, photos:[], tab:"list", filter:"all", openExp:{}, openNote:{}, saveState:"", confirmDel:false, downloads:null, ready:false };
+const S = { q:"", hq:"", searchOpen:false, hopen:{}, view:"home", audits:[], cur:null, photos:[], tab:"list", filter:"all", openExp:{}, openNote:{}, saveState:"", confirmDel:false, downloads:null, ready:false };
 
 function newAudit(code){
   const f=FORM_BY[code]; const now=Date.now();
@@ -431,6 +465,9 @@ function renderHome(){
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
+    <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
+    <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
+    <div id="homeRes">${homeResHTML()}</div>
     <div class="sec-title"><h2>Yeni tanık denetimi</h2><span class="muted">${FORMS.length} kapsam</span></div>
     <div class="eq-grid">${FORMS.map(f=>{ const n=f.sections.reduce((s,x)=>s+x.items.length,0); return `<button class="eq" data-new="${esc(f.code)}"><span class="code">${esc(f.code)}</span><span><span class="nm">${esc(f.name)}</span><br><span class="cnt num">${n} madde · 5 bölüm</span></span><span class="plus">${ICON.plus}</span></button>`; }).join("")}</div>
     <div class="home-tools">
@@ -442,9 +479,19 @@ function renderHome(){
   if(!S.downloads) $("#backupAll").hidden=true;
 }
 
+function homeResHTML(){
+  const ts=terms(S.hq); if(!ts.length) return `<p class="sr-count">Tüm çeklistlerin maddelerinde, beklenen uygulama metinlerinde ve referanslarında arar.</p>`;
+  const res=[]; FORMS.forEach(f=>f.sections.forEach(s=>s.items.forEach(it=>{ if(hasAll([it.no,it.t,it.d,it.ref,f.code,f.name].join(" \u00a0 "),ts)) res.push({f,s,it}); })));
+  if(!res.length) return `<p class="sr-count">“${esc(S.hq)}” için sonuç yok.</p>`;
+  const forms=new Set(res.map(r=>r.f.code)).size; const MAX=60;
+  return `<p class="sr-count">${res.length} madde · ${forms} formda${res.length>MAX?" · ilk "+MAX+" gösteriliyor":""}</p><div class="list" style="margin-top:8px">${res.slice(0,MAX).map(({f,s,it})=>{ const k=f.code+"|"+it.no, open=!!S.hopen[k];
+    return `<button class="res" data-sr="${esc(k)}" aria-expanded="${open}"><div class="rh"><span class="code">${esc(f.code)}</span><span class="no">${hl(it.no,ts)}</span><span class="t">${hl(it.t,ts)}</span></div><div class="fm">${esc(f.name)} · Bölüm ${s.id}</div>${open||ts.some(t=>fold(it.d).includes(t))?`<p>${hl(it.d,ts)}</p>`:""}${open?`<div class="ref">${hl(it.ref||"",ts)}</div>`:""}</button>`; }).join("")}</div>`;
+}
+function paintHomeRes(){ const el=$("#homeRes"); if(el) el.innerHTML=homeResHTML(); }
+
 /* ================= denetim ekranı ================= */
 async function openAudit(a){
-  S.cur=a; S.view="audit"; S.tab=S.tab||"list"; S.confirmDel=false; S.photos=[]; S.saveState="";
+  S.cur=a; S.q=""; S.searchOpen=false; S.view="audit"; S.tab=S.tab||"list"; S.confirmDel=false; S.photos=[]; S.saveState="";
   renderAudit(); window.scrollTo(0,0);
   S.photos=await Store.photos(a.id);
   if(S.cur===a && S.tab==="list") renderTab();
@@ -481,7 +528,7 @@ function renderTab(){
   else if(S.tab==="sum") body.innerHTML=sumHTML();
   else if(S.tab==="rep") body.innerHTML=repHTML();
   else body.innerHTML=refHTML();
-  paintProgress();
+  paintProgress(); if(S.tab==="list") paintListCount();
 }
 
 /* --- kapak --- */
@@ -501,29 +548,38 @@ function coverHTML(){
 }
 
 /* --- çeklist --- */
-function itemVisible(it){ const st=S.cur.items[it.no]||{}; const ph=S.photos.some(p=>p.itemNo===it.no);
+function itemMatches(it){ const ts=terms(S.q); if(!ts.length) return true; const st=S.cur.items[it.no]||{}; return hasAll([it.no,it.t,it.d,it.ref,st.note||""].join(" \u00a0 "),ts); }
+function itemVisible(it){ if(!itemMatches(it)) return false; const st=S.cur.items[it.no]||{}; const ph=S.photos.some(p=>p.itemNo===it.no);
   if(S.filter==="empty") return !st.v; if(S.filter==="UD") return st.v==="UD"; if(S.filter==="note") return !!(st.note||ph); if(S.filter==="missing") return (st.v==="UD"||st.v==="KD")&&!st.note; return true; }
 function listHTML(){
   const a=S.cur, f=FORM_BY[a.code], c=counts(a);
-  const nav=`<nav class="sec-nav" aria-label="Bölümler">${f.sections.map(s=>{const b=c.bySec[s.id];return `<button class="sec-chip${b.done===b.n?" done":""}" data-sec="${s.id}" data-jump="${s.id}"><b>${s.id}</b><small class="num">${b.done}/${b.n}</small></button>`;}).join("")}
+  const nav=`<nav class="sec-nav" aria-label="Bölümler"><button class="search-btn" id="searchToggle" aria-label="Maddelerde ara" aria-pressed="${S.searchOpen}">${ICON.search}</button>${f.sections.map(s=>{const b=c.bySec[s.id];return `<button class="sec-chip${b.done===b.n?" done":""}" data-sec="${s.id}" data-jump="${s.id}"><b>${s.id}</b><small class="num">${b.done}/${b.n}</small></button>`;}).join("")}
     <select class="filter" id="filterSel" aria-label="Filtre">${[["all","Tümü"],["empty","Değerlendirilmemiş"],["UD","Yalnız UD"],["missing","Notu eksik UD/KD"],["note","Notlu / fotoğraflı"]].map(([k,l])=>`<option value="${k}"${S.filter===k?" selected":""}>${l}</option>`).join("")}</select></nav>`;
-  let body="";
+  const sb = S.searchOpen ? `<div class="list-search"><div class="searchbar">${ICON.search}<input id="listQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Madde, beklenen uygulama, referans veya not ara" value="${esc(S.q)}">${S.q?`<button class="clr" id="listQClear">Temizle</button>`:""}</div><div class="sr-count" id="listCount"></div></div>` : "";
+  return nav+sb+`<div id="itemsBox">${itemsBodyHTML()}</div>`;
+}
+function itemsBodyHTML(){
+  const f=FORM_BY[S.cur.code]; let body="", n=0;
   f.sections.forEach(s=>{
-    const its=s.items.filter(itemVisible); if(!its.length) return;
+    const its=s.items.filter(itemVisible); if(!its.length) return; n+=its.length;
     body+=`<div class="sec-head" id="sec-${s.id}"><div class="l">${s.id}</div><h2>${esc(s.title.replace(/^BÖLÜM\s+\w\s+—\s*/,""))}</h2></div><div class="items">${its.map(itemHTML).join("")}</div>`;
   });
-  if(!body) body=`<div class="empty" style="margin-top:16px">Bu filtreye uyan madde yok.</div>`;
-  return nav+body;
+  S._listN=n;
+  if(!body) body=`<div class="empty" style="margin-top:16px">${S.q?"“"+esc(S.q)+"” için eşleşen madde yok.":"Bu filtreye uyan madde yok."}</div>`;
+  return body;
 }
+function paintListCount(){ const el=$("#listCount"); if(!el) return; el.textContent = S.q ? S._listN+" madde bulundu" : "Yazdıkça maddeler süzülür. Türkçe karakter gerekmez (ör. “catal”, “fren testi”)."; }
 function itemHTML(it){
+  const qt=terms(S.q);
+  const qd=qt.some(t=>fold(it.d).includes(t)); const expOpen = S.openExp[it.no]===undefined ? qd : S.openExp[it.no];
   const st=S.cur.items[it.no]||{}; const v=st.v||""; const ph=S.photos.filter(p=>p.itemNo===it.no);
   const showNote = !!st.note || v==="UD" || v==="KD" || S.openNote[it.no];
   const need = (v==="UD"&&!st.note)?"UD işaretlendi: bulguyu yazın (Excel G sütununa aktarılır).":(v==="KD"&&!st.note)?"KD işaretlendi: kapsam dışı gerekçesini yazın.":"";
   return `<article class="item" id="it-${it.no}" data-no="${it.no}" data-s="${v}">
-    <div class="item-h"><span class="no">${esc(it.no)}</span><h3>${esc(it.t)}</h3></div>
-    <p class="exp${S.openExp[it.no]?" open":""}">${esc(it.d)}</p>
-    ${it.d&&it.d.length>150?`<button class="more" data-exp="${it.no}">${S.openExp[it.no]?"Daha az":"Tamamını oku"}</button>`:""}
-    <div class="ref">${esc(it.ref||"")}</div>
+    <div class="item-h"><span class="no">${hl(it.no,qt)}</span><h3>${hl(it.t,qt)}</h3></div>
+    <p class="exp${expOpen?" open":""}">${hl(it.d,qt)}</p>
+    ${it.d&&it.d.length>150?`<button class="more" data-exp="${it.no}">${expOpen?"Daha az":"Tamamını oku"}</button>`:""}
+    <div class="ref">${hl(it.ref||"",qt)}</div>
     <div class="seg" role="group" aria-label="${esc(it.no)} değerlendirme">${STATUSES.map(s=>`<button data-set="${s}" data-v="${s}" aria-pressed="${v===s}">${s}</button>`).join("")}</div>
     ${need?`<div class="need">${need}</div>`:""}
     ${showNote?`<textarea class="note" id="note-${it.no}" data-note="${it.no}" rows="2" placeholder="Bulgu / gözlem notu">${esc(st.note||"")}</textarea>`:""}
@@ -851,9 +907,13 @@ document.addEventListener("click",async e=>{
   if(d.open){ const a=S.audits.find(x=>x.id===d.open); if(a){ S.tab="list"; S.filter="all"; openAudit(a);} return; }
   if(t.id==="backBtn"){ await flush(); S.cur=null; S.audits=await Store.list(); renderHome(); window.scrollTo(0,0); return; }
   if(d.tab){ setTab(d.tab); return; }
+  if(t.id==="searchToggle"){ S.searchOpen=!S.searchOpen; if(!S.searchOpen) S.q=""; renderTab(); if(S.searchOpen){ const i=$("#listQ"); if(i) i.focus(); } return; }
+  if(t.id==="listQClear"){ S.q=""; const i=$("#listQ"); if(i){ i.value=""; i.focus(); } $("#itemsBox").innerHTML=itemsBodyHTML(); paintListCount(); t.remove(); return; }
+  if(t.id==="homeQClear"){ S.hq=""; S.hopen={}; const i=$("#homeQ"); if(i){ i.value=""; i.focus(); } paintHomeRes(); t.remove(); return; }
+  if(d.sr){ S.hopen[d.sr]=!S.hopen[d.sr]; paintHomeRes(); return; }
   if(d.set){ const no=t.closest(".item").dataset.no; const st=S.cur.items[no]||(S.cur.items[no]={}); st.v=(st.v===d.set)?"":d.set; st.at=Date.now(); if(!st.v&&!st.note) delete S.cur.items[no]; touch(); repaintItem(no);
     if(st.v==="UD"||st.v==="KD"){ const n=document.getElementById("note-"+no); if(n&&!n.value) n.focus({preventScroll:true}); } return; }
-  if(d.exp){ S.openExp[d.exp]=!S.openExp[d.exp]; repaintItem(d.exp); return; }
+  if(d.exp){ const cur=document.querySelector("#it-"+CSS.escape(d.exp)+" .exp"); S.openExp[d.exp]=!(cur&&cur.classList.contains("open")); repaintItem(d.exp); return; }
   if(d.addnote){ S.openNote[d.addnote]=true; repaintItem(d.addnote); const n=document.getElementById("note-"+d.addnote); if(n) n.focus(); return; }
   if(d.addphoto){ photoTarget=d.addphoto; const i=$("#photoInput"); i.value=""; i.click(); return; }
   if(d.photo){ openViewer(d.photo); return; }
@@ -876,8 +936,12 @@ document.addEventListener("click",async e=>{
   if(t.id==="delNo"){ S.confirmDel=false; renderTab(); return; }
   if(t.id==="delYes"){ const a=S.cur; clearTimeout(saveT); S.cur=null; await Store.remove(a); S.audits=await Store.list(); renderHome(); toast("Denetim silindi"); return; }
 });
+let qT=null;
 document.addEventListener("input",e=>{
-  const el=e.target; if(!S.cur) return;
+  const el=e.target;
+  if(el.id==="homeQ"){ S.hq=el.value; clearTimeout(qT); qT=setTimeout(()=>{ paintHomeRes(); const bar=el.parentElement; const has=bar.querySelector(".clr"); if(S.hq&&!has){ bar.insertAdjacentHTML("beforeend",'<button class="clr" id="homeQClear">Temizle</button>'); } else if(!S.hq&&has) has.remove(); },150); return; }
+  if(el.id==="listQ"){ S.q=el.value; clearTimeout(qT); qT=setTimeout(()=>{ $("#itemsBox").innerHTML=itemsBodyHTML(); paintListCount(); const bar=el.parentElement; const has=bar.querySelector(".clr"); if(S.q&&!has){ bar.insertAdjacentHTML("beforeend",'<button class="clr" id="listQClear">Temizle</button>'); } else if(!S.q&&has) has.remove(); },150); return; }
+  if(!S.cur) return;
   if(el.dataset.cv){ S.cur.cover[el.dataset.cv]=el.value; touch(); }
   else if(el.dataset.note){ const no=el.dataset.note; const st=S.cur.items[no]||(S.cur.items[no]={}); st.note=el.value; if(!st.at) st.at=Date.now(); touch();
     const item=el.closest(".item"); const need=item&&item.querySelector(".need"); if(need&&el.value) need.remove(); }
@@ -891,6 +955,7 @@ document.addEventListener("change",e=>{
   else if(e.target.id==="photoInput"){ onPhotos([...e.target.files]); }
   else if(e.target.id==="importInput" && e.target.files[0]){ importJSON(e.target.files[0]); }
 });
+document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.target.id==="homeQ"||e.target.id==="listQ")){ e.preventDefault(); e.target.blur(); } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flush(); else if(S.view==="audit"){ try{ navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){} } });
 window.addEventListener("pagehide",()=>{ flush(); });
 
