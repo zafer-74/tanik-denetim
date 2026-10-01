@@ -226,6 +226,32 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .res p{margin:6px 0 0;font-size:13.5px;color:var(--ink);opacity:.86}
 .res .ref{margin-top:4px}
 
+/* yapay zekâ */
+.ai-btn{color:var(--steel)}
+.ai-btn svg{color:var(--accent)}
+.ai-card{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:var(--r);border:1px dashed color-mix(in srgb,var(--accent) 70%,var(--line));background:color-mix(in srgb,var(--accent) 7%,var(--surface));margin-bottom:12px}
+.ai-card p{margin:0;font-size:13.5px;color:var(--muted)}
+.ai-card .row{display:flex;gap:8px;flex-wrap:wrap}
+.ai-card .btn{min-height:40px;font-size:14px}
+.ai-card .btn svg{color:var(--accent)}
+.ai-acts{display:flex;gap:8px;flex-wrap:wrap}
+.ai-acts .btn{min-height:40px;font-size:14px}
+.ai-acts .btn svg{color:var(--accent)}
+.ai-acts .btn.primary svg,.ai-card .btn.primary svg{color:var(--accent-ink)}
+.ai-out{white-space:pre-wrap;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:14.5px;line-height:1.5;min-height:56px;overflow-wrap:anywhere}
+.ai-out.wait{color:var(--muted)}
+.ai-out.err{color:var(--ud);background:var(--ud-bg);border-color:transparent}
+.ai-ask{display:flex;gap:8px;align-items:flex-end}
+.ai-ask textarea{flex:1;min-width:0;min-height:44px;max-height:140px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);padding:10px 12px}
+.ai-note{font-size:12px;color:var(--muted)}
+.chat{display:flex;flex-direction:column;gap:8px}
+.msg{padding:10px 12px;border-radius:12px;font-size:14.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;max-width:92%}
+.msg.u{align-self:flex-end;background:var(--steel);color:var(--bg)}
+.msg.a{align-self:flex-start;background:var(--surface-2);border:1px solid var(--line)}
+.ai-prev{display:flex;flex-direction:column;gap:6px;max-height:46vh;overflow:auto}
+.ai-prev div{font-size:13.5px;background:var(--surface-2);border-radius:8px;padding:8px 10px}
+.ai-prev b{font-family:var(--f-display);color:var(--steel)}
+
 /* çoklu enspektör */
 .ens-list{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
 .ens-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 2px 6px}
@@ -345,6 +371,7 @@ const ICON = {
   search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>',
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>',
   pull:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
+  spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 5.4L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.6z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   xls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8.5 12.5l4 5M12.5 12.5l-4 5"/></svg>',
   save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>',
@@ -500,6 +527,7 @@ function renderHome(){
     <div id="homeRes">${homeResHTML()}</div>
     <div class="sec-title"><h2>Yeni tanık denetimi</h2><span class="muted">${FORMS.length} kapsam</span></div>
     <div class="eq-grid">${FORMS.map(f=>{ const n=f.sections.reduce((s,x)=>s+x.items.length,0); return `<button class="eq" data-new="${esc(f.code)}"><span class="code">${esc(f.code)}</span><span><span class="nm">${esc(f.name)}</span><br><span class="cnt num">${n} madde · 5 bölüm</span></span><span class="plus">${ICON.plus}</span></button>`; }).join("")}</div>
+    ${PWA?`<div class="ai-card" style="margin-top:18px"><p><b style="color:var(--ink)">Yapay zekâ</b> · ${aiKey()?"Etkin – "+esc((AI_MODELS.find(m=>m[0]===aiModel())||[0,aiModel()])[1]):"Kapalı. Bulgu yazımı, kanaat ve rapor taslağı için API anahtarı ekleyin."}</p><div class="row"><button class="btn" id="aiSettings">${ICON.spark}Yapay zekâ ayarları</button></div></div>`:""}
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
       <button class="btn ghost" id="importBtn">${ICON.up}Yedekten geri yükle</button>
@@ -534,6 +562,7 @@ function renderAudit(){
     <div class="top-row">
       <button class="icon-btn" id="backBtn" aria-label="Denetimlere dön">${ICON.back}</button>
       <div class="top-title"><div class="code">${esc(f.code)}</div><h1>${esc(f.name)}</h1></div>
+      <button class="icon-btn ai-btn" id="aiChatBtn" aria-label="Yapay zekâ asistanı" ${aiShown()?"":"hidden"}>${ICON.spark}</button>
     </div>
     <div class="top-prog" id="topProg"></div>
   </div></header>
@@ -625,6 +654,7 @@ function itemHTML(it){
     <div class="item-tools">
       ${showNote?"":`<button class="btn" data-addnote="${it.no}">${ICON.note}Not</button>`}
       <button class="btn" data-addphoto="${it.no}">${ICON.cam}Fotoğraf${ph.length?` (${ph.length})`:""}</button>
+      ${aiShown()?`<button class="btn ai-btn" data-aiitem="${it.no}" aria-label="${esc(it.no)} için yapay zekâ">${ICON.spark}YZ</button>`:""}
       ${st.at?`<span class="ts num">${fmtTime(st.at)}</span>`:""}
     </div>
   </article>`;
@@ -654,6 +684,7 @@ function sumHTML(){
     <div class="list">${finds||'<div class="empty">UD veya KD işaretlenmiş madde yok.</div>'}</div>
   </section>
   <section class="group"><h2>Tanık denetim kanaati</h2>
+    ${aiShown()?`<div class="ai-card"><p>Değerlendirmeler ve notlardan kanaat taslağı ve sonuç önerisi hazırlatın.</p><div class="row"><button class="btn" id="aiKanaat">${ICON.spark}Yapay zekâ ile kanaat taslağı</button></div></div>`:""}
     <div class="fields">
       <div class="field"><label for="kanaat">Kanaat metni</label><textarea id="kanaat" data-top="kanaat" rows="5" placeholder="Enspektörün saha faaliyetine ilişkin genel değerlendirme">${esc(a.kanaat)}</textarea></div>
       <div class="field"><label>Sonuç</label><div class="sonuc">${["Yeterli","Şartlı Yeterli","Yetersiz"].map(s=>`<button data-sonuc="${s}" data-v="${s}" aria-pressed="${a.sonuc===s}">${s}</button>`).join("")}</div></div>
@@ -870,6 +901,7 @@ function repHTML(){
     ${info("Muayene personeli",ensNames(a,", "))}
     ${fld("std","Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no",{area:true,rows:2})}
   </div></section>
+  ${aiShown()?`<div class="ai-card"><p>Çeklistten gelen yorumları resmi rapor diline çevirin veya genel değerlendirme taslağı yazdırın.</p><div class="row"><button class="btn" id="aiReport">${ICON.spark}Yapay zekâ ile düzenle</button></div></div>`:""}
   <section class="group"><h2>Değerlendirme</h2>
     <p class="hint" style="margin:0 0 10px">Durumlar çeklistten önerilir: herhangi bir UD → <b>YD</b>; ilgili maddelerin hepsi değerlendirilmiş ve U varsa → <b>Y</b>; tümü KD → <b>UD</b> (uygulanabilir değil). Tanık denetçisi değiştirebilir. Formdaki UD "Uygulanabilir Değil" anlamındadır.</p>
     <div class="list">${crit}</div>
@@ -951,6 +983,183 @@ async function exportDocx(){
 }
 
 
+
+
+/* ================= yapay zekâ ================= */
+const AI={sample:null,limits:null,chats:{}};
+const AI_MODELS=[["claude-sonnet-5-5","Claude Sonnet 5.5 (önerilen)"],["claude-haiku-4-5-20251001","Claude Haiku 4.5 (hızlı, ekonomik)"],["claude-opus-5-5","Claude Opus 5.5 (en güçlü)"]];
+const lsGet=k=>{ try{ return localStorage.getItem(k)||""; }catch(e){ return ""; } };
+const lsSet=(k,v)=>{ try{ v?localStorage.setItem(k,v):localStorage.removeItem(k); }catch(e){} };
+const aiKey=()=>lsGet("tanik_ai_key");
+const aiModel=()=>lsGet("tanik_ai_model")||AI_MODELS[0][0];
+function aiShown(){ return PWA || !!AI.sample; }
+async function aiInit(){ if(PWA||!window.claude||!window.claude.use) return; try{ AI.sample=await window.claude.use("sample"); if(AI.sample){ try{ AI.limits=await AI.sample.limits(); }catch(e){} } }catch(e){ AI.sample=null; } }
+function dataUrlToBlob(d){ const m=d.match(/^data:([^;]+);base64,(.*)$/); const bin=atob(m[2]); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type:m[1]}); }
+function aiErrText(e){ const c=e&&e.code||"";
+  if(c==="no_key") return "Yapay zekâ için API anahtarı girilmemiş. Ana ekrandaki “Yapay zekâ ayarları”ndan ekleyin.";
+  if(c==="offline") return "İnternet bağlantısı yok. Yapay zekâ özellikleri bağlantı gerektirir.";
+  if(c==="http_401"||c==="http_403") return "API anahtarı geçersiz veya yetkisiz. Ayarlardan kontrol edin.";
+  if(c==="http_429"||c==="rate_limited") return "Çok fazla istek gönderildi. Biraz bekleyip tekrar deneyin.";
+  if(c==="http_400"&&e.message&&/credit|balance/i.test(e.message)) return "API hesabında yeterli bakiye yok.";
+  if(c==="not_granted") return "Yapay zekâ kullanımına izin verilmedi.";
+  if(c==="session_expired") return "Claude oturumunuzun süresi dolmuş; yeniden giriş yapın.";
+  if(c==="refused") return "Yapay zekâ bu isteği yanıtlamadı.";
+  if(c==="prompt_too_large") return "Gönderilecek bilgi çok uzun.";
+  return "Yapay zekâ yanıt veremedi ("+(c||"bilinmeyen hata")+(e&&e.message?": "+e.message:"")+").";
+}
+/* input: metin veya [{role,content}] (son tur kullanıcı); images: dataURL dizisi */
+async function aiAsk(input,{onText,signal,images}={}){
+  const turns=typeof input==="string"?[{role:"user",content:input}]:input;
+  if(!PWA){
+    if(!AI.sample) throw {code:"unavailable"};
+    const o={signal,cache:false,onText:u=>onText&&onText(u.text)};
+    if(images&&images.length&&AI.limits&&AI.limits.images) o.images=images.slice(0,AI.limits.images.maxCount).map(dataUrlToBlob);
+    const r=await AI.sample(typeof input==="string"?input:turns,o); return r.text+(r.truncated?"\n[Yanıt uzunluk sınırında kesildi]":"");
+  }
+  const key=aiKey(); if(!key) throw {code:"no_key"}; if(navigator.onLine===false) throw {code:"offline"};
+  const msgs=turns.map((t,i)=>{ if(i===turns.length-1&&images&&images.length){ const c=[]; images.slice(0,4).forEach(d=>{ const m=d.match(/^data:(image\/[\w+.-]+);base64,(.*)$/); if(m) c.push({type:"image",source:{type:"base64",media_type:m[1],data:m[2]}}); }); c.push({type:"text",text:t.content}); return {role:t.role,content:c}; } return {role:t.role,content:t.content}; });
+  let res; try{ res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal,headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:aiModel(),max_tokens:2500,stream:true,messages:msgs})}); }
+  catch(e){ if(e&&e.name==="AbortError") throw {code:"cancelled"}; throw {code:"offline"}; }
+  if(!res.ok){ let m=""; try{ const j=await res.json(); m=(j.error&&j.error.message)||""; }catch(e){} throw {code:"http_"+res.status,message:m}; }
+  const rd=res.body.getReader(), dec=new TextDecoder(); let buf="", text="";
+  try{ for(;;){ const {done,value}=await rd.read(); if(done) break; buf+=dec.decode(value,{stream:true}); let i;
+      while((i=buf.indexOf("\n\n"))>=0){ const ev=buf.slice(0,i); buf=buf.slice(i+2); const line=ev.split("\n").find(l=>l.startsWith("data:")); if(!line) continue; let j; try{ j=JSON.parse(line.slice(5)); }catch(e){ continue; }
+        if(j.type==="content_block_delta"&&j.delta&&j.delta.type==="text_delta"){ text+=j.delta.text; onText&&onText(text); }
+        else if(j.type==="error") throw {code:"api_error",message:j.error&&j.error.message}; } } }
+  catch(e){ if(e&&e.name==="AbortError") throw {code:"cancelled",text}; throw e; }
+  if(!text) throw {code:"empty"}; return text;
+}
+function parseJSON(t){ const m=String(t).match(/\{[\s\S]*\}/); if(!m) throw {code:"invalid_json"}; return JSON.parse(m[0]); }
+
+const AI_ROLE="Sen, TÜRKAK adına ISO/IEC 17020 kapsamında muayene kuruluşlarının kaldırma-iletme ekipmanları periyodik kontrol faaliyetine tanık olan bir teknik uzmana (tanık denetçisi) sahada yardım eden bir asistansın.";
+const AI_RULES="Kurallar: Türkçe ve resmi denetim dilinde yaz. Yalnızca aşağıda verilen bilgilere dayan; madde numarası, standart maddesi veya sayısal sınır değer uydurma; verilen metinde olmayan bir şeyi kesinmiş gibi söyleme, emin değilsen belirt. Muayene kuruluşuna danışmanlık/çözüm önerme. Markdown başlığı, yıldız işareti, tablo veya emoji kullanma; düz metin yaz.";
+const ST_LONG={U:"U (Uygun)",UD:"UD (Uygun Değil)",G:"G (Gözlenmedi)",KD:"KD (Kapsam Dışı)"};
+function ctxForm(a){ const f=FORM_BY[a.code]; return "Ekipman / kapsam: "+f.code+" "+f.name+"\n"+f.method; }
+function ctxItem(a,it){ const st=a.items[it.no]||{}; return "Madde "+it.no+" – "+it.t+"\nBeklenen uygulama / aranacak kanıt: "+it.d+"\nReferans: "+(it.ref||"-")+"\nTanık denetçisinin değerlendirmesi: "+(st.v?ST_LONG[st.v]:"henüz yok")+"\nTanık denetçisinin ham notu: "+(st.note||"(yok)"); }
+function ctxAudit(a,full){ const f=FORM_BY[a.code], c=counts(a);
+  const lines=f.sections.map(s=>"BÖLÜM "+s.id+" – "+s.title.replace(/^BÖLÜM\s+\w\s+—\s*/,"")+"\n"+s.items.map(it=>{ const st=a.items[it.no]||{}; return "- "+it.no+" "+it.t+(full?" | Beklenen: "+it.d+" | Ref: "+(it.ref||"-"):"")+" | Değerlendirme: "+(st.v||"boş")+(st.note?" | Not: "+st.note:""); }).join("\n")).join("\n\n");
+  const ratio=c.ratio===null?"-":"%"+(c.ratio*100).toFixed(1);
+  return ctxForm(a)+"\nEnspektör(ler): "+(ensNames(a)||"-")+"\nToplam "+c.total+" madde: "+c.U+" U, "+c.UD+" UD, "+c.G+" G, "+c.KD+" KD, "+c.empty+" boş. Uygunluk oranı U/(U+UD): "+ratio+"\n\n"+lines;
+}
+
+/* --- ortak panel (alt sayfa) --- */
+function aiSheet(title,bodyHTML){ const v=openSheet(`<div style="display:flex;align-items:center;gap:8px"><span style="color:var(--accent);display:inline-flex">${ICON.spark}</span><b style="flex:1">${esc(title)}</b><button class="btn" data-x style="min-height:36px">Kapat</button></div>${bodyHTML}<p class="ai-note">${PWA?"Model: "+esc((AI_MODELS.find(m=>m[0]===aiModel())||[0,aiModel()])[1])+" · ":""}Yapay zekâ yanıtları hatalı olabilir; kullanmadan önce kontrol edin.</p>`);
+  v.addEventListener("click",e=>{ if(e.target===v||e.target.closest("[data-x]")){ if(v._ctrl) v._ctrl.abort(); v.remove(); } }); return v; }
+async function aiRun(v,outEl,prompt,opts={}){
+  if(v._ctrl) v._ctrl.abort(); const ctrl=new AbortController(); v._ctrl=ctrl;
+  outEl.hidden=false; outEl.className="ai-out wait"; outEl.textContent="Yapay zekâ düşünüyor…"; v.querySelectorAll("[data-after]").forEach(b=>b.hidden=true);
+  const stop=v.querySelector("[data-stop]"); if(stop) stop.hidden=false;
+  try{ const t=await aiAsk(prompt,{signal:ctrl.signal,images:opts.images,onText:x=>{ outEl.className="ai-out"; outEl.textContent=x; }});
+    outEl.className="ai-out"; outEl.textContent=t.trim(); v.querySelectorAll("[data-after]").forEach(b=>b.hidden=false); return t.trim(); }
+  catch(e){ if(e&&e.code==="cancelled"){ outEl.className="ai-out"; if(!outEl.textContent||outEl.textContent==="Yapay zekâ düşünüyor…") outEl.textContent="Durduruldu."; return null; }
+    outEl.className="ai-out err"; outEl.textContent=aiErrText(e); if(e&&e.code==="no_key"){ const b=document.createElement("button"); b.className="btn"; b.textContent="Yapay zekâ ayarlarını aç"; b.onclick=()=>{ v.remove(); openAiSettings(); }; outEl.after(b); } return null; }
+  finally{ if(stop) stop.hidden=true; if(v._ctrl===ctrl) v._ctrl=null; }
+}
+
+/* --- madde paneli --- */
+function openItemAI(no){
+  const a=S.cur, f=FORM_BY[a.code], it=allItems(f).find(x=>x.no===no); if(!it) return;
+  const photos=S.photos.filter(p=>p.itemNo===no).slice(-3).map(p=>p.data);
+  const v=aiSheet(it.no+" · "+it.t,`
+    <div class="ai-acts"><button class="btn" data-ai="bulgu">${ICON.spark}Bulgu metni yaz</button><button class="btn" data-ai="rehber">${ICON.spark}Neye bakmalıyım?</button></div>
+    <div class="ai-ask"><textarea id="aiQ" rows="1" placeholder="Bu madde hakkında sorun (ör. test yükü nasıl doğrulanır?)"></textarea><button class="btn primary" data-ai="sor">Sor</button></div>
+    <div class="ai-out" id="aiOut" hidden></div>
+    <div class="ai-acts"><button class="btn" data-stop hidden>Durdur</button><button class="btn primary" data-after data-put="replace" hidden>Notu bununla değiştir</button><button class="btn" data-after data-put="append" hidden>Nota ekle</button><button class="btn" data-after data-copy hidden>Kopyala</button></div>
+    ${photos.length?`<p class="ai-note">Bulgu yazımında bu maddenin son ${photos.length} fotoğrafı da gönderilir${!PWA&&!(AI.limits&&AI.limits.images)?" (bu görünüm fotoğraf gönderemiyor, yalnızca not kullanılır)":""}.</p>`:""}`);
+  const out=v.querySelector("#aiOut"); let last="";
+  v.addEventListener("click",async e=>{ const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.ai==="bulgu"){ const st=a.items[no]||{}; if(!(st.note||"").trim()&&!photos.length){ toast("Önce kısa bir not yazın (sesle yazdırabilirsiniz) veya fotoğraf ekleyin."); return; }
+      last=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxForm(a)+"\n\n"+ctxItem(a,it)+"\n\nGörev: Tanık denetçisinin ham notunu"+(photos.length?" ve ekteki fotoğrafları":"")+" kullanarak çeklistin Bulgu/Gözlem sütununa yazılacak, 1-3 cümlelik nesnel ve resmi bir bulgu metni yaz. Neyin gözlendiğini ve beklenen uygulamadan farkı belirt; ham notta olmayan olgu ekleme. Yalnızca bulgu metnini döndür.",{images:photos})||""; return; }
+    if(d.ai==="rehber"){ last=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxForm(a)+"\n\n"+ctxItem(a,it)+"\n\nGörev: Tanık denetçisi bu maddede enspektörü izlerken sahada neye bakmalı? En fazla 6 satırlık gözlenebilir kontrol noktası ve enspektöre sorulabilecek 2 soru yaz. Her satır \"- \" ile başlasın.")||""; return; }
+    if(d.ai==="sor"){ const q=v.querySelector("#aiQ").value.trim(); if(!q){ toast("Sorunuzu yazın."); return; } last=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxForm(a)+"\n\n"+ctxItem(a,it)+"\n\nTanık denetçisinin sorusu: "+q+"\nKısa ve sahada uygulanabilir yanıt ver.")||""; return; }
+    if(d.put&&last){ const st=a.items[no]||(a.items[no]={}); st.note = d.put==="replace"||!st.note ? last : st.note.trim()+"\n"+last; st.at=st.at||Date.now(); touch(); v.remove(); repaintItem(no); toast("Not güncellendi"); return; }
+    if(d.copy!==undefined&&last){ try{ await navigator.clipboard.writeText(last); toast("Kopyalandı"); }catch(err){ toast("Kopyalanamadı"); } return; }
+  });
+}
+
+/* --- özet: kanaat taslağı --- */
+function openKanaatAI(){
+  const a=S.cur;
+  const v=aiSheet("Kanaat taslağı",`<p class="hint" style="margin:0">Tüm madde değerlendirmeleri ve notlar kullanılarak tanık denetim kanaati ve sonuç önerisi hazırlanır.</p>
+    <div class="ai-acts"><button class="btn primary" data-ai="kanaat">${ICON.spark}Taslağı oluştur</button><button class="btn" data-stop hidden>Durdur</button></div>
+    <div class="ai-out" id="aiOut" hidden></div>
+    <div class="ai-acts"><button class="btn primary" data-after data-put="replace" hidden>Kanaate yaz</button><button class="btn" data-after data-put="append" hidden>Mevcut kanaate ekle</button><button class="btn" data-after data-sonuc hidden></button></div>`);
+  const out=v.querySelector("#aiOut"); let last="", sug="";
+  v.addEventListener("click",async e=>{ const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.ai==="kanaat"){ const t=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxAudit(a,false)+(a.kanaat?"\n\nTanık denetçisinin mevcut kanaat notu: "+a.kanaat:"")+"\n\nGörev: Enspektörün saha faaliyetine ilişkin 4-7 cümlelik tanık denetim kanaati yaz. Güçlü yönleri ve UD/KD bulgularını madde numaralarıyla belirt; G olan önemli maddeler varsa gözlenemediğini not et. En son ayrı bir satıra yalnızca şu biçimde öneri yaz: \"Önerilen sonuç: Yeterli\" ya da \"Önerilen sonuç: Şartlı Yeterli\" ya da \"Önerilen sonuç: Yetersiz\" ve aynı satırda kısa gerekçe.");
+      if(!t) return; const m=t.match(/Önerilen sonuç:\s*(Şartlı Yeterli|Yetersiz|Yeterli)/i); sug=m?m[1].replace(/^./,ch=>ch.toLocaleUpperCase("tr")):""; if(/^şartlı/i.test(sug)) sug="Şartlı Yeterli"; else if(/^yetersiz/i.test(sug)) sug="Yetersiz"; else if(sug) sug="Yeterli";
+      last=t.replace(/\n?.*Önerilen sonuç:.*$/im,"").trim(); const sb=v.querySelector("[data-sonuc]"); if(sug){ sb.textContent="Sonucu “"+sug+"” işaretle"; sb.hidden=false; } else sb.hidden=true; return; }
+    if(d.put&&last){ a.kanaat = d.put==="replace"||!a.kanaat ? last : a.kanaat.trim()+"\n"+last; touch(); v.remove(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast("Kanaat metnine yazıldı"); return; }
+    if(d.sonuc!==undefined&&sug){ a.sonuc=sug; touch(); b.hidden=true; document.querySelectorAll("[data-sonuc]").forEach(x=>{ if(x.closest(".sonuc")) x.setAttribute("aria-pressed",x.dataset.sonuc===sug); }); toast("Sonuç: "+sug+" olarak işaretlendi"); return; }
+  });
+}
+
+/* --- rapor: yorumlar ve genel değerlendirme --- */
+function openReportAI(){
+  const a=S.cur;
+  const v=aiSheet("F701-056 raporu",`<p class="hint" style="margin:0">Yapay zekâ, çeklistten oluşan yorumları resmi rapor diline çevirir veya genel değerlendirme taslağı yazar. Uygulamadan önce önizlemeyi kontrol edin.</p>
+    <div class="ai-acts"><button class="btn primary" data-ai="yorum">${ICON.spark}Yorumları resmi dile çevir</button><button class="btn" data-ai="genel">${ICON.spark}Genel değerlendirme yaz</button><button class="btn" data-stop hidden>Durdur</button></div>
+    <div class="ai-out" id="aiOut" hidden></div><div class="ai-prev" id="aiPrev" hidden></div>
+    <div class="ai-acts"><button class="btn primary" data-apply hidden>Rapora uygula</button></div>`);
+  const out=v.querySelector("#aiOut"), prev=v.querySelector("#aiPrev"), ap=v.querySelector("[data-apply]"); let pending=null;
+  v.addEventListener("click",async e=>{ const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.ai==="yorum"){ prev.hidden=true; ap.hidden=true; pending=null;
+      const rows=CRITERIA.map((cr,i)=>{ const e2=effRow(a,i); return (i+1)+". "+cr.tr+" | Durum: "+(e2.s||"boş")+" | Mevcut yorum: "+(e2.c||"(boş)").replace(/\n/g," / "); }).join("\n");
+      const t=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxForm(a)+"\n\nTÜRKAK F701-056 Tanık Denetim Objektif Delil Kayıt Formu kriterleri ve çeklistten üretilmiş mevcut yorumlar:\n"+rows+"\n\nGörev: Her kriterin yorumunu 'İlgili Kayıtlar ve/veya Yorum' sütununa uygun, kısa (en fazla 2 cümle), resmi bir metne dönüştür. Çeklist madde numaralarını (A3, C12 gibi) koru, yeni olgu ekleme. Durumu YD olanlarda gerekçe mutlaka yer alsın. Mevcut yorumu boş olanları boş bırak. Yanıtı YALNIZCA şu biçimde geçerli JSON olarak ver: {\"1\":\"...\",\"2\":\"...\", ... ,\"15\":\"...\"}");
+      if(!t) return; try{ const j=parseJSON(t); pending={type:"yorum",data:j}; out.hidden=true; prev.hidden=false; prev.innerHTML=CRITERIA.map((cr,i)=>j[String(i+1)]?`<div><b>${i+1}.</b> ${esc(j[String(i+1)])}</div>`:"").join(""); ap.hidden=false; }
+      catch(err){ out.className="ai-out err"; out.textContent="Yanıt beklenen biçimde gelmedi; tekrar deneyin."; } return; }
+    if(d.ai==="genel"){ prev.hidden=true; ap.hidden=true; pending=null;
+      const t=await aiRun(v,out,AI_ROLE+"\n"+AI_RULES+"\n\n"+ctxAudit(a,false)+(a.kanaat?"\n\nTanık denetim kanaati: "+a.kanaat:"")+(a.sonuc?"\nSonuç: "+a.sonuc:"")+"\n\nGörev: TÜRKAK F701-056 formunun 'Genel Değerlendirme' bölümü için 4-6 cümlelik metin yaz. Formdaki yönlendirmeye uygun olarak; muayene personelinin izlenebilirlik/kalibrasyon bilgi seviyesi, muayene süresinin gerçeğe uygunluğu, bulguların sınıflandırılması ve müşteriye iletilmesi konularına verilen bilgiler ölçüsünde değin (D8, E12, E13 ve A6-A7 maddeleri). Bilgi yoksa uydurma. Sonunda çeklist özetini tek cümleyle ver.");
+      if(t){ pending={type:"genel",data:t}; ap.hidden=false; } return; }
+    if(d.apply!==undefined&&pending){ const r=rep(a);
+      if(pending.type==="yorum"){ let n=0; CRITERIA.forEach((_,i)=>{ const x=pending.data[String(i+1)]; if(x&&String(x).trim()){ (r.rows[i]=r.rows[i]||{}).c=String(x).trim(); n++; } }); toast(n+" kriter yorumu güncellendi"); }
+      else { r.genel=pending.data; toast("Genel değerlendirme yazıldı"); }
+      touch(); v.remove(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); }
+  });
+}
+
+/* --- asistan sohbeti --- */
+function openChatAI(){
+  const a=S.cur; const turns=AI.chats[a.id]||(AI.chats[a.id]=[]);
+  const v=aiSheet("Asistan · "+FORM_BY[a.code].code,`<p class="hint" style="margin:0">Bu formun maddeleri, referansları ve şu ana kadarki değerlendirmeleriniz hakkında soru sorun.</p>
+    <div class="chat" id="aiChat"></div><div class="ai-out" id="aiOut" hidden></div>
+    <div class="ai-ask"><textarea id="aiQ" rows="1" placeholder="ör. Hangi maddeler henüz değerlendirilmedi? Yük testinde nelere dikkat edilmeli?"></textarea><button class="btn primary" data-send>Gönder</button></div>
+    <div class="ai-acts"><button class="btn" data-stop hidden>Durdur</button>${turns.length?'<button class="btn" data-clear>Sohbeti temizle</button>':""}</div>`);
+  const chat=v.querySelector("#aiChat"), out=v.querySelector("#aiOut");
+  const draw=()=>{ chat.innerHTML=turns.map(t=>`<div class="msg ${t.role==="user"?"u":"a"}">${esc(t.shown||t.content)}</div>`).join(""); };
+  draw();
+  v.addEventListener("click",async e=>{ const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.clear!==undefined){ turns.length=0; draw(); b.remove(); return; }
+    if(d.send!==undefined){ const q=v.querySelector("#aiQ").value.trim(); if(!q) return; v.querySelector("#aiQ").value="";
+      const first=!turns.length; const content= first ? AI_ROLE+"\n"+AI_RULES+"\n\nFORM VE DEĞERLENDİRME DURUMU:\n"+ctxAudit(a,true)+"\n\nREFERANSLAR:\n"+FORM_BY[a.code].refs.map(r=>r[0]+": "+r[1]).join("\n")+"\n\nSoru: "+q : q;
+      turns.push({role:"user",content,shown:q}); draw(); chat.lastElementChild.scrollIntoView({block:"end"});
+      const t=await aiRun(v,out,turns.map(x=>({role:x.role,content:x.content})));
+      if(t){ turns.push({role:"assistant",content:t}); out.hidden=true; draw(); chat.lastElementChild.scrollIntoView({block:"end"}); } else { turns.pop(); draw(); } }
+  });
+}
+
+/* --- PWA ayarları --- */
+function openAiSettings(){
+  const v=openSheet(`<b>Yapay zekâ ayarları</b>
+    <p class="hint" style="margin:0">Bu sürüm yapay zekâ için Anthropic API anahtarı kullanır. Anahtarı console.anthropic.com adresinden oluşturabilirsiniz. Anahtar yalnızca bu telefonda saklanır; kullanım ücreti API hesabınıza yansır.</p>
+    <div class="fields"><div class="field"><label for="aiKeyIn">API anahtarı</label><input id="aiKeyIn" type="password" autocomplete="off" placeholder="sk-ant-…" value="${esc(aiKey())}"></div>
+    <div class="field"><label for="aiModelIn">Model</label><select id="aiModelIn">${AI_MODELS.map(m=>`<option value="${m[0]}" ${m[0]===aiModel()?"selected":""}>${esc(m[1])}</option>`).join("")}</select></div></div>
+    <div class="ai-out" id="aiTest" hidden></div>
+    <div class="btns"><button class="btn" data-test>Bağlantıyı dene</button><button class="btn primary" data-save>Kaydet</button></div>
+    ${aiKey()?'<button class="btn danger" data-del>Anahtarı bu telefondan sil</button>':""}<button class="btn" data-x>Kapat</button>`);
+  const tOut=v.querySelector("#aiTest");
+  v.addEventListener("click",async e=>{ if(e.target===v){ v.remove(); return; } const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    const save=()=>{ lsSet("tanik_ai_key",v.querySelector("#aiKeyIn").value.trim()); lsSet("tanik_ai_model",v.querySelector("#aiModelIn").value); };
+    if(d.x!==undefined){ v.remove(); return; }
+    if(d.save!==undefined){ save(); v.remove(); toast(aiKey()?"Yapay zekâ ayarları kaydedildi":"Anahtar kaldırıldı"); if(S.view==="home") renderHome(); return; }
+    if(d.del!==undefined){ lsSet("tanik_ai_key",""); v.remove(); toast("Anahtar silindi"); if(S.view==="home") renderHome(); return; }
+    if(d.test!==undefined){ save(); tOut.hidden=false; tOut.className="ai-out wait"; tOut.textContent="Deneniyor…"; try{ const t=await aiAsk("Yalnızca 'Bağlantı başarılı' yaz."); tOut.className="ai-out"; tOut.textContent="✓ "+t.trim(); }catch(err){ tOut.className="ai-out err"; tOut.textContent=aiErrText(err); } }
+  });
+}
 
 /* ================= çoklu enspektör ================= */
 const ENS_KEYS=[["ad","Adı Soyadı",""],["unvan","Ünvanı / Mesleği",""],["ekipnet","EKİPNET Kayıt Numarası",""],["yetki","Kuruluş İçi Yetkilendirme Tarihi","date"]];
@@ -1081,6 +1290,11 @@ document.addEventListener("click",async e=>{
   if(d.sonuc){ S.cur.sonuc=(S.cur.sonuc===d.sonuc)?"":d.sonuc; touch(); document.querySelectorAll("[data-sonuc]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sonuc===S.cur.sonuc)); return; }
   if(t.id==="xlsBtn"){ exportXlsx(); return; }
   if(t.id==="copyOut"){ openCopyOut(); return; }
+  if(d.aiitem){ openItemAI(d.aiitem); return; }
+  if(t.id==="aiChatBtn"){ openChatAI(); return; }
+  if(t.id==="aiKanaat"){ openKanaatAI(); return; }
+  if(t.id==="aiReport"){ openReportAI(); return; }
+  if(t.id==="aiSettings"){ openAiSettings(); return; }
   if(t.id==="ensAdd"){ const L=ensList(S.cur); L.push({ad:"",unvan:"",ekipnet:"",yetki:""}); S.ensDel=null; touch(); repaintCoverKeep(); const i=document.getElementById("en-"+(L.length-1)+"-ad"); if(i){ i.focus(); i.scrollIntoView({block:"center"}); } return; }
   if(d.ensdel!==undefined){ const i=+d.ensdel; if(S.ensDel!==i){ S.ensDel=i; repaintCoverKeep(); return; } ensList(S.cur).splice(i,1); S.ensDel=null; ensSync(S.cur); touch(); repaintCoverKeep(); toast("Enspektör kaldırıldı"); return; }
   if(t.id==="copyIn"||t.id==="copyIn2"){ openCopyIn(); return; }
@@ -1130,6 +1344,7 @@ async function start(hot){
   S.audits=await Store.list(); renderHome();
   await initCloud();
   if(!PWA && window.claude && window.claude.use){ try{ S.downloads=await window.claude.use("downloads"); }catch(e){} }
+  await aiInit();
   const fresh=await Store.list(); S.audits=fresh;
   if(hot && hot.auditId){ const a=fresh.find(x=>x.id===hot.auditId); if(a){ S.tab=hot.tab||"list"; openAudit(a); return; } }
   if(S.view==="home") renderHome();

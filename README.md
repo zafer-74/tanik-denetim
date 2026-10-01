@@ -57,3 +57,20 @@ Klasörü sunucuda bir dizine (örn. `https://kurum.gov.tr/tanik/`) olduğu gibi
 2. `sw.js` dosyasının ilk satırlarındaki `SURUM` değerini artırın (örn. `tanik-v1` → `tanik-v2`) ve yükleyin.
 3. Telefonlar uygulamayı internet varken açtığında yeni sürümü alır (gerekirse uygulamayı kapatıp yeniden açın).
    Kayıtlar güncellemeden etkilenmez.
+
+## 5. Yapay zekâ (isteğe bağlı)
+Uygulamadaki yapay zekâ özellikleri:
+- **Her maddede "YZ" düğmesi:** ham not ve fotoğraftan resmi bulgu metni, "Neye bakmalıyım?" önerisi, maddeye özel soru.
+- **Özet sekmesi:** kanaat taslağı ve sonuç önerisi.
+- **Rapor sekmesi:** F701-056 yorumlarını resmi dile çevirme, genel değerlendirme taslağı.
+- **Üst köşedeki yıldız düğmesi:** formun tamamı hakkında asistanla sohbet.
+
+Kurulum:
+1. console.anthropic.com adresinde hesap açın, ödeme yöntemi ekleyin ve **API Keys** bölümünden bir anahtar oluşturun.
+2. Uygulamada ana ekrandaki **Yapay zekâ ayarları**'na anahtarı yapıştırın → **Bağlantıyı dene** → **Kaydet**.
+
+Notlar:
+- Anahtar yalnızca o telefonda saklanır; her kullanıcı kendi anahtarını girer. Anahtarı başkalarıyla paylaşmayın.
+- Kullanım ücreti API hesabına yansır. Haiku modeli en ekonomik seçenektir.
+- Yapay zekâ internet gerektirir; çevrimdışıyken diğer tüm özellikler çalışmaya devam eder.
+- Yapay zekâ yanıtları hatalı olabilir; rapora geçmeden önce kontrol edin.
