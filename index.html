@@ -570,6 +570,7 @@ function coverHTML(){
     if(x.row===28){ html+=`<div class="field"><label for="${id}">${esc(x.label)}</label><input id="${id}" data-cv="28" value="${esc(v)}" placeholder="ör. 09:40 - 11:15" autocomplete="off"><div class="row"><button class="btn" data-time="start">Başlangıç: şimdi</button><button class="btn" data-time="end">Bitiş: şimdi</button></div></div>`; return; }
     const long=x.label.length>60;
     html+=`<div class="field"><label for="${id}">${esc(x.label)}</label>${long?`<textarea id="${id}" data-cv="${x.row}" rows="2">${esc(v)}</textarea>`:`<input id="${id}" data-cv="${x.row}" value="${esc(v)}" autocomplete="off">`}</div>`;
+    if(x.row===11) html+=`<div class="field"><label for="cvDenNo">Denetim No</label><input id="cvDenNo" data-rep="denetimNo" value="${esc(rep(a).denetimNo||"")}" placeholder="TÜRKAK denetim numarası" autocomplete="off"></div>`;
   });
   if(open) html+="</div></section>";
   return html + `<p class="hint">${esc(f.method)}</p>`;
@@ -715,6 +716,14 @@ async function buildXlsx(a,photos){
   f.cover.forEach(x=>{ if(x.row && x.row!==8){ const v=a.cover[x.row]; if(v) k.getCell("C"+x.row).value=DATE_ROWS[x.row]?isoToTr(v):v; } });
   const pc={}; photos.forEach(p=>pc[p.itemNo]=(pc[p.itemNo]||0)+1);
   allItems(f).forEach(it=>{ const st=a.items[it.no]||{}; if(st.v) c.getCell("E"+it.row).value=st.v; let note=st.note||""; if(pc[it.no]) note+=(note?" ":"")+"[Foto: "+pc[it.no]+" adet – Fotoğraflar sayfası]"; if(note) c.getCell("G"+it.row).value=note; });
+  // Denetim No: kapakta Denetim Bilgileri bölümünün son satırı (boş ara satır 12 kullanılır)
+  try{
+    ["B","C","D","E","F"].forEach(col=>{ k.getCell(col+"12").style=JSON.parse(JSON.stringify(k.getCell(col+"11").style||{})); });
+    if(!k.getCell("C12").isMerged) k.mergeCells("C12:F12");
+    k.getRow(12).height=k.getRow(11).height||18;
+    k.getCell("B12").value="Denetim No";
+    const dno=(rep(a).denetimNo||"").trim(); if(dno) k.getCell("C12").value=dno;
+  }catch(e){ console.warn("Denetim No satırı yazılamadı",e); }
   if(a.kanaat) k.getCell("B42").value=a.kanaat;
   if(a.sonuc) k.getCell("C48").value=a.sonuc;
   if(a.tanik) k.getCell("C49").value=a.tanik;
@@ -836,7 +845,7 @@ function repHTML(){
   <div class="form-id"><b>F701-056</b><span>Muayene Kuruluşları İçin Tanık Denetim Objektif Delil Kayıt Formu</span></div>
   <section class="group"><h2>Form başlığı</h2><div class="fields">
     ${fld("dosyaNo","Dosya No",{ph:"AB-0903-M"})}
-    ${fld("denetimNo","Denetim No")}
+    ${fld("denetimNo","Denetim No (Kapak ile ortak)")}
     ${info("Kuruluşun adı",a.cover[7])}
     ${info("Denetim tarihi",isoToTr(a.cover[9]))}
     ${info("Muayene faaliyetinin gerçekleştirildiği kuruluş ve adresi",a.cover[10])}
@@ -930,9 +939,9 @@ async function exportDocx(){
 
 /* ================= kapak bilgilerini kopyalama ================= */
 const COPY_GROUPS=[
-  {id:"den",title:"Denetim bilgileri",fields:[7,9,10,11].map(r=>({k:"c"+r,row:r}))},
+  {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"}]},
   {id:"ens",title:"Denetlenen enspektör",fields:[14,15,16,17].map(r=>({k:"c"+r,row:r}))},
-  {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"r:denetimNo",label:"Denetim No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
+  {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
 ];
 const ALL_FIELDS=COPY_GROUPS.flatMap(g=>g.fields);
 function fLabel(f){ if(f.row){ const x=FORMS[0].cover.find(c=>c.row===f.row); return x?x.label:""; } return f.label; }
