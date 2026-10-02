@@ -118,7 +118,7 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .tab[aria-selected="true"]{color:var(--ink)}
 .tab[aria-selected="true"]::before{content:"";position:absolute;top:0;left:28%;right:28%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
 .tab .badge{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ud);color:#fff;font-size:11px;display:grid;place-items:center}
-.page{padding-block:14px calc(var(--tabh) + 40px + env(safe-area-inset-bottom,0px))}
+.page{padding-block:14px calc(var(--tabh) + 96px + env(safe-area-inset-bottom,0px))}
 
 /* form alanları */
 .group{margin-bottom:22px}
@@ -225,6 +225,22 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .res .fm{font-size:12.5px;color:var(--muted);margin-top:2px}
 .res p{margin:6px 0 0;font-size:13.5px;color:var(--ink);opacity:.86}
 .res .ref{margin-top:4px}
+
+/* boş madde gezinme */
+.fab-row{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(var(--tabh) + 14px + env(safe-area-inset-bottom,0px));z-index:25;display:flex;gap:8px;align-items:center}
+.fab{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--bg);font-weight:600;font-size:14.5px;box-shadow:0 6px 20px rgba(0,0,0,.22)}
+.fab svg{width:18px;height:18px}
+.fab b{font-family:var(--f-display);font-size:18px;color:var(--accent)}
+.fab.sq{width:48px;padding:0;justify-content:center}
+.fab.done{background:var(--u);color:var(--surface)}
+.top-prog.tap{cursor:pointer}
+.item.flash{box-shadow:0 0 0 3px var(--accent);border-color:var(--accent)}
+@media (prefers-reduced-motion:no-preference){.item.flash{transition:box-shadow .3s}}
+.stat.tap{text-align:left;font:inherit;color:inherit;cursor:pointer}
+.stat.tap .k{text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px}
+.miss{display:flex;gap:10px;align-items:baseline;width:100%;text-align:left;background:var(--surface-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:14px}
+.miss .no{font-family:var(--f-display);font-weight:700;color:var(--steel);min-width:34px}
+.miss-list{display:flex;flex-direction:column;gap:6px}
 
 /* yapay zekâ */
 .ai-btn{color:var(--steel)}
@@ -372,6 +388,8 @@ const ICON = {
   copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>',
   pull:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>',
   spark:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3l1.8 5.4L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.6z"/><path d="M19 15l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg>',
+  down:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
+  todo:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><path d="M14 7h6M14 17h6"/></svg>',
   plus:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   xls:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 00-2 2v14a2 2 0 002 2h12a2 2 0 002-2V9l-6-6z"/><path d="M14 3v6h6M8.5 12.5l4 5M12.5 12.5l-4 5"/></svg>',
   save:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>',
@@ -567,6 +585,7 @@ function renderAudit(){
     <div class="top-prog" id="topProg"></div>
   </div></header>
   <main class="page"><div class="wrap" id="tabBody"></div></main>
+  <div class="fab-row" id="fabRow" hidden></div>
   <nav class="tabs" role="tablist"><div class="wrap">
     ${[["cover","Kapak",ICON.cover],["list","Çeklist",ICON.list],["sum","Özet",ICON.sum],["rep","Rapor",ICON.doc],["ref","Referans",ICON.book]].map(([k,l,i])=>`<button class="tab" role="tab" data-tab="${k}" aria-selected="${S.tab===k}">${i}<span>${l}</span>${k==="sum"?'<span class="badge" id="udBadge" hidden></span>':""}</button>`).join("")}
   </div></nav>`;
@@ -577,6 +596,8 @@ function paintProgress(){
   const c=counts(S.cur); const el=$("#topProg"); if(!el) return;
   el.innerHTML = `${barHTML(c)}<span class="counts num">${c.total-c.empty}/${c.total} · <b style="color:var(--u)">${c.U}</b> U · <b style="color:var(--ud)">${c.UD}</b> UD</span><span class="save-state" id="saveState">${esc(S.saveState)}</span>`;
   const b=$("#udBadge"); if(b){ b.hidden=!c.UD; b.textContent=c.UD; }
+  el.classList.add("tap"); el.setAttribute("role","button"); el.setAttribute("aria-label","Eksik maddeleri göster");
+  paintFab();
   document.querySelectorAll(".sec-chip").forEach(ch=>{ const s=c.bySec[ch.dataset.sec]; if(!s) return; ch.querySelector("small").textContent=s.done+"/"+s.n; ch.classList.toggle("done",s.done===s.n); });
 }
 function setTab(t){ S.tab=t; document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t)); renderTab(); window.scrollTo(0,0); }
@@ -676,7 +697,7 @@ function sumHTML(){
     <div class="stats">
       <div class="stat"><div class="v num">${ratio}</div><div class="k">Uygunluk U/(U+UD)</div></div>
       <div class="stat"><div class="v num">${c.total-c.empty}<span class="muted" style="font-size:18px">/${c.total}</span></div><div class="k">Değerlendirilen</div></div>
-      <div class="stat"><div class="v num" style="color:${c.empty?"var(--warn)":"var(--u)"}">${c.empty}</div><div class="k">Boş madde</div></div>
+      <button class="stat tap" id="emptyList2"><div class="v num" style="color:${c.empty?"var(--warn)":"var(--u)"}">${c.empty}</div><div class="k">Boş madde${c.empty?" · göster":""}</div></button>
     </div>
     <div class="table-wrap"><table><thead><tr><th>Bölüm</th><th class="cu">U</th><th class="cud">UD</th><th class="cg">G</th><th class="ckd">KD</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Toplam</td><td>${c.U}</td><td>${c.UD}</td><td>${c.G}</td><td>${c.KD}</td></tr></tfoot></table></div>
   </section>
@@ -812,7 +833,7 @@ async function saveFile(filename,data){
   catch(e){ if(e&&e.code==="declined") return; if(e&&e.code==="rate_limited"){ toast("Önceki indirme onayı hâlâ açık."); return; } toast("Dosya kaydedilemedi ("+(e&&e.code||"hata")+")."); }
 }
 async function exportXlsx(){
-  const a=S.cur; await flush(); const btn=$("#xlsBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Excel hazırlanıyor…";}
+  const a=S.cur; await flush(); if(!(await confirmEmpty())) return; const btn=$("#xlsBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Excel hazırlanıyor…";}
   try{ const buf=await buildXlsx(a,S.photos); const f=FORM_BY[a.code];
     const name=[f.code,"Tanik_Denetim",safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".xlsx";
     await saveFile(name,new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
@@ -974,7 +995,7 @@ async function buildDocx(a){
   return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
 }
 async function exportDocx(){
-  const a=S.cur; await flush(); const btn=$("#docBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Rapor hazırlanıyor…";}
+  const a=S.cur; await flush(); if(!(await confirmEmpty())) return; const btn=$("#docBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Rapor hazırlanıyor…";}
   try{ const blob=await buildDocx(a); const f=FORM_BY[a.code];
     const name=["F701-056",f.code,safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx";
     await saveFile(name,blob);
@@ -984,6 +1005,48 @@ async function exportDocx(){
 
 
 
+
+
+/* ================= işaretlenmemiş maddeler ================= */
+function emptyItems(a){ return allItems(FORM_BY[a.code]).filter(it=>!(a.items[it.no]||{}).v); }
+function noteMissing(a){ return allItems(FORM_BY[a.code]).filter(it=>{ const st=a.items[it.no]||{}; return (st.v==="UD"||st.v==="KD")&&!(st.note||"").trim(); }); }
+function paintFab(){
+  const box=$("#fabRow"); if(!box) return; if(!S.cur||S.tab!=="list"){ box.hidden=true; return; }
+  const n=emptyItems(S.cur).length; box.hidden=false;
+  box.innerHTML = n ? `<button class="fab sq" id="emptyList" aria-label="İşaretlenmemiş maddelerin listesi">${ICON.todo}</button><button class="fab" id="nextEmpty">${ICON.down}Sonraki boş <b class="num">${n}</b></button>`
+                    : `<button class="fab done" id="emptyList">✓ Tüm maddeler işaretlendi</button>`;
+}
+function flashItem(el){ el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),1600); }
+function gotoItem(no){
+  const show=()=>{ const el=document.getElementById("it-"+no); if(el){ el.scrollIntoView({block:"start",behavior:"smooth"}); flashItem(el); } };
+  const needReset = S.tab!=="list" || !document.getElementById("it-"+no);
+  if(needReset){ S.filter="all"; S.q=""; S.searchOpen=false; if(S.tab!=="list") setTab("list"); else renderTab(); requestAnimationFrame(()=>requestAnimationFrame(show)); }
+  else show();
+}
+function goNextEmpty(){
+  const list=emptyItems(S.cur); if(!list.length){ toast("Tüm maddeler işaretlendi"); paintFab(); return; }
+  const topLine=(parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--toph"))||88)+70;
+  let target=null;
+  for(const it of list){ const el=document.getElementById("it-"+it.no); if(!el) continue; if(el.getBoundingClientRect().top>topLine+4){ target=it; break; } }
+  if(!target){ target=list[0]; if(document.getElementById("it-"+target.no)) toast("Başa dönüldü"); }
+  gotoItem(target.no);
+}
+function openEmptyList(){
+  const a=S.cur, f=FORM_BY[a.code], E=new Set(emptyItems(a).map(i=>i.no)), M=noteMissing(a);
+  const secs=f.sections.map(s=>{ const its=s.items.filter(it=>E.has(it.no)); return its.length?`<h3>${s.id} · ${its.length} madde</h3><div class="miss-list">${its.map(it=>`<button class="miss" data-goto2="${it.no}"><span class="no">${it.no}</span><span>${esc(it.t)}</span></button>`).join("")}</div>`:""; }).join("");
+  const v=openSheet(`<div style="display:flex;align-items:center;gap:8px"><b style="flex:1">Eksik maddeler</b><button class="btn" data-x style="min-height:36px">Kapat</button></div>
+    <p class="hint" style="margin:0">${E.size?E.size+" madde henüz işaretlenmedi. Gitmek için dokunun.":"Tüm maddeler işaretlendi."}</p>
+    ${secs}
+    ${M.length?`<h3>Notu eksik UD / KD · ${M.length}</h3><div class="miss-list">${M.map(it=>`<button class="miss" data-goto2="${it.no}"><span class="no">${it.no}</span><span>${esc(it.t)} <span class="muted">(${(a.items[it.no]||{}).v})</span></span></button>`).join("")}</div>`:""}`);
+  v.addEventListener("click",e=>{ if(e.target===v||e.target.closest("[data-x]")){ v.remove(); return; } const b=e.target.closest("[data-goto2]"); if(b){ v.remove(); gotoItem(b.dataset.goto2); } });
+}
+/* indirmeden önce uyarı: true = devam */
+function confirmEmpty(){
+  const a=S.cur, n=emptyItems(a).length, m=noteMissing(a).length; if(!n&&!m) return Promise.resolve(true);
+  return new Promise(res=>{ const v=openSheet(`<b>Eksikler var</b><p class="hint" style="margin:0">${[n?n+" madde işaretlenmemiş":"", m?m+" UD/KD maddesinde not eksik":""].filter(Boolean).join(", ")}. Dosya yine de oluşturulabilir; boş maddeler formda boş kalır.</p>
+    <div class="btns"><button class="btn" data-go2>Eksikleri göster</button><button class="btn primary" data-cont>Yine de indir</button></div>`);
+    v.addEventListener("click",e=>{ if(e.target===v){ v.remove(); res(false); return; } if(e.target.closest("[data-cont]")){ v.remove(); res(true); } else if(e.target.closest("[data-go2]")){ v.remove(); res(false); openEmptyList(); } }); });
+}
 
 /* ================= yapay zekâ ================= */
 const AI={sample:null,limits:null,chats:{}};
@@ -1290,6 +1353,8 @@ document.addEventListener("click",async e=>{
   if(d.sonuc){ S.cur.sonuc=(S.cur.sonuc===d.sonuc)?"":d.sonuc; touch(); document.querySelectorAll("[data-sonuc]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sonuc===S.cur.sonuc)); return; }
   if(t.id==="xlsBtn"){ exportXlsx(); return; }
   if(t.id==="copyOut"){ openCopyOut(); return; }
+  if(t.id==="nextEmpty"){ goNextEmpty(); return; }
+  if(t.id==="emptyList"||t.id==="emptyList2"){ openEmptyList(); return; }
   if(d.aiitem){ openItemAI(d.aiitem); return; }
   if(t.id==="aiChatBtn"){ openChatAI(); return; }
   if(t.id==="aiKanaat"){ openKanaatAI(); return; }
@@ -1314,6 +1379,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="delYes"){ const a=S.cur; clearTimeout(saveT); S.cur=null; await Store.remove(a); S.audits=await Store.list(); renderHome(); toast("Denetim silindi"); return; }
 });
 let qT=null;
+document.addEventListener("click",e=>{ if(e.target.closest("#topProg") && S.cur) openEmptyList(); });
 document.addEventListener("input",e=>{
   const el=e.target;
   if(el.id==="homeQ"){ S.hq=el.value; clearTimeout(qT); qT=setTimeout(()=>{ paintHomeRes(); const bar=el.parentElement; const has=bar.querySelector(".clr"); if(S.hq&&!has){ bar.insertAdjacentHTML("beforeend",'<button class="clr" id="homeQClear">Temizle</button>'); } else if(!S.hq&&has) has.remove(); },150); return; }
