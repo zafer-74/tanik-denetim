@@ -740,11 +740,11 @@ function refHTML(){
 
 /* ================= fotoğraf ================= */
 let photoTarget=null;
-function compress(file){
+function compress(file,doc){
   return new Promise((res,rej)=>{
     const url=URL.createObjectURL(file); const img=new Image();
-    img.onload=()=>{ let w=img.naturalWidth,h=img.naturalHeight; const M=1400; if(Math.max(w,h)>M){const k=M/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);}
-      const cv=document.createElement("canvas"); cv.width=w; cv.height=h; cv.getContext("2d").drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
+    img.onload=()=>{ let w=img.naturalWidth,h=img.naturalHeight; const M=doc?1800:1400; if(Math.max(w,h)>M){const k=M/Math.max(w,h);w=Math.round(w*k);h=Math.round(h*k);}
+      const cv=document.createElement("canvas"); cv.width=w; cv.height=h; const cx=cv.getContext("2d"); if(doc){ try{ cx.filter="grayscale(1) contrast(1.2)"; }catch(e){} } cx.drawImage(img,0,0,w,h); URL.revokeObjectURL(url);
       let q=.72, d=cv.toDataURL("image/jpeg",q); while(d.length>230000 && q>.3){ q-=.1; d=cv.toDataURL("image/jpeg",q); }
       if(d.length>230000){ const c2=document.createElement("canvas"); c2.width=Math.round(w*.7); c2.height=Math.round(h*.7); c2.getContext("2d").drawImage(cv,0,0,c2.width,c2.height); d=c2.toDataURL("image/jpeg",.6); }
       res(d); };
@@ -753,16 +753,18 @@ function compress(file){
 }
 async function onPhotos(files){
   const no=photoTarget; if(!no||!S.cur) return; let n=0;
-  for(const file of files){ try{ const data=await compress(file); const p={id:"p"+uid(),auditId:S.cur.id,itemNo:no,data,caption:"",at:Date.now()}; S.photos.push(p); Store.putPhoto(p); n++; }catch(e){ toast("Fotoğraf okunamadı. JPEG veya PNG seçin."); } }
+  const isRep=/^R/.test(no);
+  for(const file of files){ try{ const data=await compress(file,isRep); const p={id:"p"+uid(),auditId:S.cur.id,itemNo:no,data,caption:"",at:Date.now()}; S.photos.push(p); Store.putPhoto(p); n++; }catch(e){ toast("Fotoğraf okunamadı. JPEG veya PNG seçin."); } }
+  if(n && isRep){ touch(); repaintCoverKeep(); toast(n+" fotoğraf eklendi"); return; }
   if(n){ const st=S.cur.items[no]||(S.cur.items[no]={}); st.at=st.at||Date.now(); touch(); repaintItem(no); toast(n+" fotoğraf "+no+" maddesine eklendi"); }
 }
 function openViewer(id){
   const p=S.photos.find(x=>x.id===id); if(!p) return;
   const v=document.createElement("div"); v.className="viewer"; v.setAttribute("role","dialog"); v.setAttribute("aria-label","Fotoğraf");
-  v.innerHTML=`<div class="vbar"><span class="num">${esc(p.itemNo)} · ${fmtDate(p.at)} ${fmtTime(p.at)}</span><button class="btn danger" data-vdel>Sil</button><button class="btn" data-vclose>Kapat</button></div><img src="${p.data}" alt=""><input id="capIn" placeholder="Açıklama (Excel'e aktarılır)" value="${esc(p.caption||"")}">`;
+  v.innerHTML=`<div class="vbar"><span class="num">${esc(/^R\d/.test(p.itemNo)?"Rapor kriteri "+p.itemNo.slice(1):p.itemNo==="RDOC"?"Doküman listesi":p.itemNo)} · ${fmtDate(p.at)} ${fmtTime(p.at)}</span><button class="btn danger" data-vdel>Sil</button><button class="btn" data-vclose>Kapat</button></div><img src="${p.data}" alt=""><input id="capIn" placeholder="Açıklama (Excel'e aktarılır)" value="${esc(p.caption||"")}">`;
   document.body.appendChild(v);
   const close=()=>{ const cap=v.querySelector("#capIn").value; if(cap!==(p.caption||"")){ p.caption=cap; Store.putPhoto(p); } v.remove(); };
-  v.addEventListener("click",async e=>{ if(e.target.closest("[data-vclose]")) close(); else if(e.target.closest("[data-vdel]")){ S.photos=S.photos.filter(x=>x.id!==p.id); await Store.delPhoto(p); v.remove(); repaintItem(p.itemNo); toast("Fotoğraf silindi"); } });
+  v.addEventListener("click",async e=>{ if(e.target.closest("[data-vclose]")) close(); else if(e.target.closest("[data-vdel]")){ S.photos=S.photos.filter(x=>x.id!==p.id); await Store.delPhoto(p); v.remove(); if(/^R/.test(p.itemNo)) repaintCoverKeep(); else repaintItem(p.itemNo); toast("Fotoğraf silindi"); } });
 }
 
 /* ================= dışa aktarım ================= */
@@ -834,7 +836,7 @@ async function saveFile(filename,data){
 }
 async function exportXlsx(){
   const a=S.cur; await flush(); if(!(await confirmEmpty())) return; const btn=$("#xlsBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Excel hazırlanıyor…";}
-  try{ const buf=await buildXlsx(a,S.photos); const f=FORM_BY[a.code];
+  try{ const buf=await buildXlsx(a,S.photos.filter(p=>!/^R/.test(p.itemNo))); const f=FORM_BY[a.code];
     const name=[f.code,"Tanik_Denetim",safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".xlsx";
     await saveFile(name,new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   }catch(e){ console.error(e); toast("Excel oluşturulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."); }
@@ -895,6 +897,8 @@ function autoGenel(a){
 function autoAlan(a){ const f=FORM_BY[a.code]; const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(", "); return "Kaldırma ve iletme ekipmanları – "+f.name+" ("+f.code+")\nPeriyodik kontrol"+(eq?"\n"+eq:""); }
 function repVal(a,k){ const r=rep(a); if(r[k]!==undefined&&r[k]!==null) return r[k];
   if(k==="alan") return autoAlan(a); if(k==="std") return a.cover[27]||""; if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
+function photoCount(no){ return S.photos.filter(p=>p.itemNo===no).length; }
+function thumbsFor(no){ const ph=S.photos.filter(p=>p.itemNo===no); return ph.length?`<div class="thumbs">${ph.map(p=>`<button class="thumb" data-photo="${p.id}" aria-label="Fotoğrafı aç"><img src="${p.data}" alt=""></button>`).join("")}</div>`:""; }
 function repHTML(){
   const a=S.cur, r=rep(a);
   const fld=(k,label,opts={})=>{ const v=repVal(a,k); const id="rp-"+k; return `<div class="field"><label for="${id}">${label}</label>${opts.area?`<textarea id="${id}" data-rep="${k}" rows="${opts.rows||3}">${esc(v)}</textarea>`:`<input id="${id}" data-rep="${k}" ${opts.type?`type="${opts.type}"`:""} value="${esc(v)}" placeholder="${esc(opts.ph||"")}" autocomplete="off">`}</div>`; };
@@ -904,6 +908,8 @@ function repHTML(){
       <div class="rseg" role="group" aria-label="Durum">${["Y","YD","UD"].map(v=>`<button data-rs="${i}" data-v="${v}" aria-pressed="${e.s===v}">${v}</button>`).join("")}</div>
       <div class="auto-line">${e.sEdited?`<span class="tag edited">Durum elle seçildi</span><span>Çeklist önerisi: ${e.auto.s||"boş"}</span>`:`<span class="tag">Durum çeklistten: ${e.auto.s||"boş"}</span>`}</div>
       <textarea id="rc-${i}" data-rc="${i}" rows="3" placeholder="İlgili kayıtlar ve/veya yorum">${esc(e.c)}</textarea>
+      ${thumbsFor("R"+(i+1))}
+      <div class="item-tools"><button class="btn" data-addphoto="R${i+1}">${ICON.cam}Kanıt fotoğrafı${photoCount("R"+(i+1))?" ("+photoCount("R"+(i+1))+")":""}</button>${aiShown()?`<button class="btn ai-btn" data-aicrit="${i}">${ICON.spark}${photoCount("R"+(i+1))?"Fotoğraftan yorum yaz":"YZ ile yorum yaz"}</button>`:""}</div>
       ${e.cEdited?`<div class="auto-line"><span class="tag edited">Yorum elle düzenlendi</span><button class="linkbtn" data-rreset="${i}">Çeklistten yeniden oluştur</button></div>`:""}
     </article>`; }).join("");
   const yd=CRITERIA.map((_,i)=>effRow(a,i)).filter(e=>e.s==="YD"&&!e.c.trim()).length;
@@ -923,6 +929,12 @@ function repHTML(){
     ${fld("std","Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no",{area:true,rows:2})}
   </div></section>
   ${aiShown()?`<div class="ai-card"><p>Çeklistten gelen yorumları resmi rapor diline çevirin veya genel değerlendirme taslağı yazdırın.</p><div class="row"><button class="btn" id="aiReport">${ICON.spark}Yapay zekâ ile düzenle</button></div></div>`:""}
+  <section class="group"><h2>Kuruluş doküman listesi</h2>
+    <p class="hint" style="margin:0 0 8px">Kuruluşun doküman listesinin veya doküman kapak sayfalarının fotoğrafını ekleyin. Yapay zekâ kod, ad ve revizyonları buraya döker; yorumlar yazılırken bu liste kullanılır.</p>
+    ${thumbsFor("RDOC")}
+    <div class="item-tools" style="margin:8px 0"><button class="btn" data-addphoto="RDOC">${ICON.cam}Fotoğraf ekle${photoCount("RDOC")?" ("+photoCount("RDOC")+")":""}</button>${aiShown()?`<button class="btn ai-btn" id="aiDocList">${ICON.spark}Fotoğraflardan listeyi çıkar</button>`:""}</div>
+    <div class="fields"><div class="field"><label for="rp-doclist">Doküman listesi (KOD | Ad | Revizyon)</label><textarea id="rp-doclist" data-rep="doclist" rows="5" placeholder="PR-104.1.7.001 | İş Ekipmanları Periyodik Kontrol Ve Muayene Prosedürü | Rev05_29.01.2026">${esc(r.doclist||"")}</textarea></div></div>
+  </section>
   <section class="group"><h2>Değerlendirme</h2>
     <p class="hint" style="margin:0 0 10px">Durumlar çeklistten önerilir: herhangi bir UD → <b>YD</b>; ilgili maddelerin hepsi değerlendirilmiş ve U varsa → <b>Y</b>; tümü KD → <b>UD</b> (uygulanabilir değil). Tanık denetçisi değiştirebilir. Formdaki UD "Uygulanabilir Değil" anlamındadır.</p>
     <div class="list">${crit}</div>
@@ -1080,7 +1092,7 @@ async function aiAsk(input,{onText,signal,images}={}){
     const r=await AI.sample(typeof input==="string"?input:turns,o); return r.text+(r.truncated?"\n[Yanıt uzunluk sınırında kesildi]":"");
   }
   const key=aiKey(); if(!key) throw {code:"no_key"}; if(navigator.onLine===false) throw {code:"offline"};
-  const msgs=turns.map((t,i)=>{ if(i===turns.length-1&&images&&images.length){ const c=[]; images.slice(0,4).forEach(d=>{ const m=d.match(/^data:(image\/[\w+.-]+);base64,(.*)$/); if(m) c.push({type:"image",source:{type:"base64",media_type:m[1],data:m[2]}}); }); c.push({type:"text",text:t.content}); return {role:t.role,content:c}; } return {role:t.role,content:t.content}; });
+  const msgs=turns.map((t,i)=>{ if(i===turns.length-1&&images&&images.length){ const c=[]; images.slice(0,6).forEach(d=>{ const m=d.match(/^data:(image\/[\w+.-]+);base64,(.*)$/); if(m) c.push({type:"image",source:{type:"base64",media_type:m[1],data:m[2]}}); }); c.push({type:"text",text:t.content}); return {role:t.role,content:c}; } return {role:t.role,content:t.content}; });
   let res; try{ res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal,headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify({model:aiModel(),max_tokens:2500,stream:true,messages:msgs})}); }
   catch(e){ if(e&&e.name==="AbortError") throw {code:"cancelled"}; throw {code:"offline"}; }
   if(!res.ok){ let m=""; try{ const j=await res.json(); m=(j.error&&j.error.message)||""; }catch(e){} throw {code:"http_"+res.status,message:m}; }
@@ -1182,6 +1194,43 @@ function openReportAI(){
       else { r.genel=pending.data; toast("Genel değerlendirme yazıldı"); }
       touch(); v.remove(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); }
   });
+}
+
+
+/* --- rapor: fotoğraflardan doküman listesi ve kriter yorumu --- */
+function imgCap(){ return PWA?6:((AI.limits&&AI.limits.images&&AI.limits.images.maxCount)||0); }
+function openDocListAI(){
+  const a=S.cur, ph=S.photos.filter(p=>p.itemNo==="RDOC").map(p=>p.data);
+  if(!ph.length){ toast("Önce doküman listesinin fotoğrafını ekleyin."); return; }
+  const cap=imgCap(); if(!cap){ toast("Bu görünüm yapay zekâya fotoğraf gönderemiyor."); return; }
+  const v=aiSheet("Doküman listesi",`<p class="hint" style="margin:0">${Math.min(ph.length,cap)} fotoğraf okunuyor${ph.length>cap?" (en son "+cap+" fotoğraf; fazlası için listeyi parça parça çıkarın)":""}.</p>
+    <div class="ai-out" id="aiOut" hidden></div>
+    <div class="ai-acts"><button class="btn" data-stop hidden>Durdur</button><button class="btn primary" data-after data-put="replace" hidden>Listeyi bununla değiştir</button><button class="btn" data-after data-put="append" hidden>Listeye ekle</button></div>`);
+  const out=v.querySelector("#aiOut"); let last="";
+  v.addEventListener("click",e=>{ const b=e.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.put&&last){ const r=rep(a); r.doclist = d.put==="replace"||!r.doclist ? last : r.doclist.trim()+"\n"+last; touch(); v.remove(); repaintCoverKeep(); toast("Doküman listesi güncellendi"); } });
+  aiRun(v,out,"Ekteki fotoğraflar bir muayene kuruluşunun doküman listesine veya doküman/form başlık bloklarına aittir.\nGörev: Görülen her dokümanı bir satırda şu biçimde listele: KOD | Doküman adı | RevNN_GG.AA.YYYY\nRevizyon numarası ve tarihi ayrı sütunlardaysa birleştir (ör. Rev05_29.01.2026). Okunamayan veya emin olmadığın karakterleri [?] ile işaretle. Görmediğin doküman ekleme. Başlık, açıklama veya numaralandırma yazma; yalnızca satırları döndür.",{images:ph.slice(-cap)}).then(t=>{ last=t||""; });
+}
+const STYLE_EXAMPLE="Örnek üslup (başka bir denetimden): 'Kuruluş iş emri sistemini PR-104.1.7.001 İş Ekipmanları Periyodik Kontrol Ve Muayene Prosedürü (Rev05_29.01.2026) madde 4.1 başlığı altında tanımlamıştır. 260618-414 iş takip numarası ile FR-104.1.0.013 İş Emri-Saha Görev Formu (Rev03_06.04.2026) ile muayene personellerini görevlendirdiği görüldü.' — 'Kumpas (Seri No: 0902221892) (AB-0068-K, 22.07.2025)' — YD örneği: 'Bulgu 13: Kuruluşun bazı ölçüm cihazlarının kalibrasyonlarını akredite olmayan laboratuvarlarda yaptırdığı görüldü. (Örnek: Zincir Mastarı (Seri No: BZM-100-140))'";
+function openCritAI(i){
+  const a=S.cur, cr=CRITERIA[i], e=effRow(a,i), ph=S.photos.filter(p=>p.itemNo==="R"+(i+1)).map(p=>p.data), cap=imgCap();
+  const useImgs=ph.length&&cap?ph.slice(-cap):[];
+  const v=aiSheet((i+1)+". "+cr.tr,`<p class="hint" style="margin:0">${useImgs.length?useImgs.length+" kanıt fotoğrafı, ":""}doküman listesi, çeklist bilgileri ve mevcut yorum kullanılarak TÜRKAK rapor üslubunda yorum yazılıyor.${ph.length&&!cap?" (Bu görünüm fotoğraf gönderemiyor; yalnızca metin kullanılıyor.)":""}</p>
+    <div class="ai-out" id="aiOut" hidden></div>
+    <div class="ai-acts"><button class="btn" data-stop hidden>Durdur</button><button class="btn primary" data-after data-put="replace" hidden>Yorumu bununla değiştir</button><button class="btn" data-after data-put="append" hidden>Yoruma ekle</button><button class="btn" data-after data-again hidden>Yeniden yaz</button></div>`);
+  const out=v.querySelector("#aiOut"); let last="";
+  const prompt=AI_ROLE+"\nGörev: TÜRKAK F701-056 Tanık Denetim Objektif Delil Kayıt Formunun 'İlgili Kayıtlar ve/veya Yorum' sütunu için tek bir kriterin metnini yaz.\n\n"+
+    "Kriter: "+cr.tr+"\nDenetim tekniği: "+cr.tech+"\nTanık denetçisinin seçtiği durum: "+(e.s||"henüz seçilmedi")+" (Y: Yeterli, YD: Yeterli değil, UD: Uygulanabilir değil)\n"+
+    ctxForm(a)+"\nMuayene personeli: "+(ensNames(a)||"-")+"\n\nKuruluş doküman listesi (tanık denetçisinin onayladığı):\n"+((rep(a).doclist||"").trim()||"(girilmedi)")+
+    "\n\nÇeklistten gelen bilgi ve tanık denetçisinin mevcut yorumu:\n"+(e.c||"(yok)")+(useImgs.length?"\n\nEkteki fotoğraflar bu kriterle ilgili kuruluş dokümanları, kayıtları veya sertifikalarıdır.":"")+
+    "\n\nYazım kuralları:\n- Türkçe, resmi denetim dili; 2-5 cümle. Markdown, madde işareti veya emoji kullanma.\n- Dokümanları 'KOD Adı (RevNN_GG.AA.YYYY)' biçiminde, varsa madde numarasıyla yaz; doküman listesindeki yazımı kullan.\n- Önce kuruluşun konuyu hangi dokümanda tanımladığını ('… tanımlamıştır'), ardından sahada/kayıtta görüleni ('… görüldü', '… görülmüştür') yaz.\n- Kayıt no, tarih, seri no, laboratuvar AB numarası, imza tarihi gibi objektif delilleri fotoğraflardan aynen aktar; okunamayan ya da emin olmadığın karakterleri [?] ile işaretle.\n- Cihaz listelerinde her cihazı ayrı satırda 'Ad (Seri No: …) (AB-…-K, GG.AA.YYYY)' biçiminde yaz.\n- Durum YD ise sonda yeni satırda 'Bulgu …:' ile başlayan bulgu cümlesi yaz (numarayı bilmiyorsan '…' bırak). Durum UD ise tek cümlelik gerekçe yaz.\n- Fotoğraflarda, doküman listesinde veya çeklist bilgisinde olmayan doküman, numara ya da olgu uydurma. Bilgi yetersizse yazabildiğin kadarını yaz ve eksik olanı [?] ile belirt.\n\n"+STYLE_EXAMPLE+"\n\nYalnızca yorum metnini döndür.";
+  const go=()=>aiRun(v,out,prompt,{images:useImgs}).then(t=>{ last=t||""; });
+  v.addEventListener("click",ev=>{ const b=ev.target.closest("button"); if(!b) return; const d=b.dataset;
+    if(d.stop!==undefined){ v._ctrl&&v._ctrl.abort(); return; }
+    if(d.again!==undefined){ go(); return; }
+    if(d.put&&last){ const r=rep(a); const row=r.rows[i]||(r.rows[i]={}); const cur=effRow(a,i).c; row.c = d.put==="replace"||!cur ? last : cur.trim()+"\n"+last; touch(); v.remove(); repaintCoverKeep(); toast((i+1)+". kriterin yorumu güncellendi"); } });
+  go();
 }
 
 /* --- asistan sohbeti --- */
@@ -1359,6 +1408,8 @@ document.addEventListener("click",async e=>{
   if(t.id==="aiChatBtn"){ openChatAI(); return; }
   if(t.id==="aiKanaat"){ openKanaatAI(); return; }
   if(t.id==="aiReport"){ openReportAI(); return; }
+  if(t.id==="aiDocList"){ openDocListAI(); return; }
+  if(d.aicrit!==undefined){ openCritAI(+d.aicrit); return; }
   if(t.id==="aiSettings"){ openAiSettings(); return; }
   if(t.id==="ensAdd"){ const L=ensList(S.cur); L.push({ad:"",unvan:"",ekipnet:"",yetki:""}); S.ensDel=null; touch(); repaintCoverKeep(); const i=document.getElementById("en-"+(L.length-1)+"-ad"); if(i){ i.focus(); i.scrollIntoView({block:"center"}); } return; }
   if(d.ensdel!==undefined){ const i=+d.ensdel; if(S.ensDel!==i){ S.ensDel=i; repaintCoverKeep(); return; } ensList(S.cur).splice(i,1); S.ensDel=null; ensSync(S.cur); touch(); repaintCoverKeep(); toast("Enspektör kaldırıldı"); return; }
