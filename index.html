@@ -93,6 +93,17 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .eq .nm{font-weight:600;line-height:1.25}
 .eq .cnt{font-size:12.5px;color:var(--muted);font-weight:400}
 .eq .plus{margin-left:auto;color:var(--muted);flex:none}
+.eq-groups{display:flex;flex-direction:column;gap:10px}
+.eq-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.eq-group>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;min-height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.eq-group>summary::-webkit-details-marker{display:none}
+.eq-group>summary .code{font-family:var(--f-display);font-weight:700;font-size:19px;min-width:44px;color:var(--steel);letter-spacing:.02em}
+.eq-group>summary .nm{font-family:var(--f-display);font-weight:700;font-size:19px;letter-spacing:.01em;line-height:1.15}
+.eq-group>summary .cnt{font-size:12.5px;color:var(--muted)}
+.eq-group>summary .chev{margin-left:auto;color:var(--muted);flex:none;transition:transform .15s}
+.eq-group[open]>summary .chev{transform:rotate(90deg)}
+.eq-group[open]>summary{border-bottom:1px solid var(--line)}
+.eq-group>.eq-grid{padding:10px;background:var(--bg)}
 .install{margin-top:6px;padding:10px 12px;border-radius:var(--r);background:var(--warn-bg);color:var(--ink);font-size:14px;max-width:60ch}
 .home-tools{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 40px}
 
@@ -544,8 +555,8 @@ function renderHome(){
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
     <div id="homeRes">${homeResHTML()}</div>
     <div class="sec-title"><h2>Yeni tanık denetimi</h2><span class="muted">${FORMS.length} kapsam</span></div>
-    <div class="searchbar" style="margin-bottom:8px">${ICON.search}<input id="eqQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Ekipman ara (ör. kule, asansör, 1.A.20)" value="${esc(S.eqq||"")}"></div>
-    <div class="eq-grid" id="eqGrid">${eqGridHTML()}</div>
+    <div class="searchbar" style="margin-bottom:8px">${ICON.search}<input id="eqQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="Ekipman ara (ör. kule, otoklav, kazan, 2.A.4)" value="${esc(S.eqq||"")}"></div>
+    <div class="eq-groups" id="eqGrid">${eqGridHTML()}</div>
     ${PWA?`<div class="ai-card" style="margin-top:18px"><p><b style="color:var(--ink)">Yapay zekâ</b> · ${aiKey()?"Etkin – "+esc((AI_MODELS.find(m=>m[0]===aiModel())||[0,aiModel()])[1]):"Kapalı. Bulgu yazımı, kanaat ve rapor taslağı için API anahtarı ekleyin."}</p><div class="row"><button class="btn" id="aiSettings">${ICON.spark}Yapay zekâ ayarları</button></div></div>`:""}
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
@@ -556,11 +567,25 @@ function renderHome(){
   if(!S.downloads) $("#backupAll").hidden=true;
 }
 
+const EQ_GROUPS=[{p:"1.",code:"1.A",name:"Kaldırma ve İletme"},{p:"2.",code:"2.A",name:"Basınçlı Kaplar"},{p:"3.",code:"3.A",name:"Kazanlar"}];
+function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
 function eqGridHTML(){
   const ts=terms(S.eqq||""); const list=FORMS.filter(f=>!ts.length||hasAll(f.code+" "+f.name,ts));
   if(!list.length) return `<p class="sr-count">“${esc(S.eqq)}” ile eşleşen ekipman yok.</p>`;
-  return list.map(f=>{ const n=f.sections.reduce((s,x)=>s+x.items.length,0); return `<button class="eq" data-new="${esc(f.code)}"><span class="code">${hl(f.code,ts)}</span><span><span class="nm">${hl(f.name,ts)}</span><br><span class="cnt num">${n} madde · 5 bölüm</span></span><span class="plus">${ICON.plus}</span></button>`; }).join("");
+  const op=eqOpenGet();
+  const card=f=>{ const n=f.sections.reduce((s,x)=>s+x.items.length,0); return `<button class="eq" data-new="${esc(f.code)}"><span class="code">${hl(f.code,ts)}</span><span><span class="nm">${hl(f.name,ts)}</span><br><span class="cnt num">${n} madde · 5 bölüm</span></span><span class="plus">${ICON.plus}</span></button>`; };
+  const known=EQ_GROUPS.map(g=>g.p);
+  const groups=EQ_GROUPS.concat([{p:"",code:"",name:"Diğer"}]);
+  return groups.map(g=>{
+    const items=list.filter(f=>g.p?f.code.startsWith(g.p):!known.some(k=>f.code.startsWith(k)));
+    if(!items.length) return "";
+    const total=FORMS.filter(f=>g.p?f.code.startsWith(g.p):!known.some(k=>f.code.startsWith(k))).length;
+    const open=ts.length?true:!!op[g.code||"diger"];
+    const cnt=ts.length?`${items.length} / ${total} ekipman eşleşti`:`${total} ekipman`;
+    return `<details class="eq-group" data-grp="${esc(g.code||"diger")}"${open?" open":""}><summary><span class="code">${esc(g.code)}</span><span><span class="nm">${esc(g.name)}</span><br><span class="cnt num">${cnt}</span></span><span class="chev">${ICON.chev}</span></summary><div class="eq-grid">${items.map(card).join("")}</div></details>`;
+  }).join("");
 }
+document.addEventListener("toggle",e=>{ const d=e.target; if(!d||!d.classList||!d.classList.contains("eq-group")) return; if((S.eqq||"").trim()) return; const op=eqOpenGet(); op[d.dataset.grp]=d.open; try{ localStorage.setItem("eqOpen",JSON.stringify(op)); }catch(err){} },true);
 function homeResHTML(){
   const ts=terms(S.hq); if(!ts.length) return `<p class="sr-count">Tüm çeklistlerin maddelerinde, beklenen uygulama metinlerinde ve referanslarında arar.</p>`;
   const res=[]; FORMS.forEach(f=>f.sections.forEach(s=>s.items.forEach(it=>{ if(hasAll([it.no,it.t,it.d,it.ref,f.code,f.name].join(" \u00a0 "),ts)) res.push({f,s,it}); })));
