@@ -368,6 +368,7 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 <div id="app"></div>
 <div id="toast" class="toast" hidden></div>
 <input id="photoInput" class="file-hidden" type="file" accept="image/*" multiple>
+<input id="cameraInput" class="file-hidden" type="file" accept="image/*" capture="environment">
 <input id="importInput" class="file-hidden" type="file" accept="application/json,.json">
 
 <script>
@@ -575,6 +576,13 @@ async function checkUpdate(){
     toast("Güncellendi"+(remote?" ("+remote.replace("tanik-","")+")":"")+". Uygulama yeniden açılıyor…");
     setTimeout(()=>location.reload(),900);
   }catch(e){ console.error(e); done("Güncelleme denetlenemedi. Bağlantıyı kontrol edip tekrar deneyin."); }
+}
+function photoChooser(){
+  const v=document.createElement("div"); v.className="sheet-back";
+  v.innerHTML=`<div class="sheet" role="dialog" aria-label="Fotoğraf ekle"><b>Fotoğraf ekle</b><button class="btn primary" data-ph="cam">Kamerayla çek</button><button class="btn" data-ph="gal">Galeriden seç (birden fazla)</button><button class="btn" data-ph="x">Vazgeç</button></div>`;
+  document.body.appendChild(v);
+  v.addEventListener("click",e=>{ const b=e.target.closest("[data-ph]"); if(e.target===v||(b&&b.dataset.ph==="x")){ v.remove(); return; } if(!b) return;
+    const i=$(b.dataset.ph==="cam"?"#cameraInput":"#photoInput"); v.remove(); i.value=""; i.click(); });
 }
 function renderChip(){ const el=$("#storeChip"); if(!el) return; el.className="chip "+(Cloud.ok?"cloud":"local"); el.innerHTML=`<span class="dot"></span>${Cloud.ok?"Kayıtlar hesabınızla senkronize":PWA?"Kayıtlar bu iPhone’da · düzenli JSON yedeği alın":"Kayıtlar yalnızca bu cihazda"}`; }
 function renderHome(){
@@ -1490,7 +1498,9 @@ document.addEventListener("click",async e=>{
     if(st.v==="UD"||st.v==="KD"){ const n=document.getElementById("note-"+no); if(n&&!n.value) n.focus({preventScroll:true}); } return; }
   if(d.exp){ const cur=document.querySelector("#it-"+CSS.escape(d.exp)+" .exp"); S.openExp[d.exp]=!(cur&&cur.classList.contains("open")); repaintItem(d.exp); return; }
   if(d.addnote){ S.openNote[d.addnote]=true; repaintItem(d.addnote); const n=document.getElementById("note-"+d.addnote); if(n) n.focus(); return; }
-  if(d.addphoto){ photoTarget=d.addphoto; const i=$("#photoInput"); i.value=""; i.click(); return; }
+  if(d.addphoto){ photoTarget=d.addphoto;
+    if(/Android/i.test(navigator.userAgent||"")){ photoChooser(); return; }
+    const i=$("#photoInput"); i.value=""; i.click(); return; }
   if(d.photo){ openViewer(d.photo); return; }
   if(d.jump){ const el=document.getElementById("sec-"+d.jump); if(el) el.scrollIntoView({behavior:"smooth",block:"start"}); return; }
   if(d.goto){ S.filter="all"; setTab("list"); requestAnimationFrame(()=>{ const el=document.getElementById("it-"+d.goto); if(el) el.scrollIntoView({block:"start"}); }); return; }
@@ -1544,7 +1554,7 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
   if(e.target.id==="filterSel"){ S.filter=e.target.value; renderTab(); }
   else if(e.target.dataset && e.target.dataset.repchk){ rep(S.cur)[e.target.dataset.repchk]=e.target.checked; touch(); }
-  else if(e.target.id==="photoInput"){ onPhotos([...e.target.files]); }
+  else if(e.target.id==="photoInput"||e.target.id==="cameraInput"){ onPhotos([...e.target.files]); }
   else if(e.target.id==="importInput" && e.target.files[0]){ importJSON(e.target.files[0]); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.target.id==="homeQ"||e.target.id==="listQ"||e.target.id==="eqQ")){ e.preventDefault(); e.target.blur(); } });
