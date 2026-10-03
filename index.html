@@ -88,6 +88,16 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .exit-btn{margin-left:auto;min-height:38px;padding:0 12px;font-size:14px;gap:6px;flex:none}
 .upd-banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:60;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:var(--r);background:var(--ink);color:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:560px;margin:0 auto;font-size:14px}
 .upd-banner .btn{min-height:38px;flex:none}
+.split-bar{position:fixed;top:0;left:0;right:0;height:52px;z-index:40;display:flex;align-items:center;gap:12px;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--line);font-size:13.5px}
+.split-bar b{display:inline-flex;align-items:center;gap:8px;font-size:15px;white-space:nowrap}
+.split-bar .muted{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.split-bar .sp{flex:1}
+.split-bar .btn{min-height:36px;flex:none}
+.split-wrap{position:fixed;top:52px;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--line)}
+.split-pane{background:var(--bg);min-width:0}
+.split-pane iframe{width:100%;height:100%;border:0;display:block}
+body.split-on{overflow:hidden}
+html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .upd-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .upd-row .btn{min-height:40px}
 .upd-row .ver{font-size:12.5px;color:var(--muted)}
@@ -432,6 +442,7 @@ function hl(text,ts){
 }
 const DATE_ROWS = {9:true,17:true};
 const ICON = {
+  split:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>',
   trash:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a2 2 0 002 2h6a2 2 0 002-2l1-13M9 7V4h6v3"/></svg>',
   lock:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
   refresh:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
@@ -464,6 +475,8 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; cle
 /* Yerel: IndexedDB (yoksa bellek). Bulut: claude db, kişiye özel data/users/<id>/ alanı. Her kayıt önce yerele yazılır. */
 /* ================= cihaz şifre kilidi (AES-GCM, PBKDF2) ================= */
 const LOCK={key:null,cfg:null,hiddenAt:0,AUTO_MIN:5};
+const EMBED=(()=>{ try{ return new URLSearchParams(location.search).has("embed") && window.parent!==window && window.parent.location.origin===location.origin; }catch(e){ return false; } })();
+if(EMBED) document.documentElement.classList.add("embed");
 const b64e=buf=>{ const u=new Uint8Array(buf); let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
 const b64d=str=>{ const s=atob(str); const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
 function lockCfgGet(){ try{ return JSON.parse(localStorage.getItem("tanikLock")||"null"); }catch(e){ return null; } }
@@ -603,7 +616,7 @@ async function curVersion(){ try{ const ks=await caches.keys(); const v=ks.filte
 async function fillVersion(){ const el=$("#verInfo"); if(!el) return; const v=await curVersion(); el.textContent=v?"Yüklü sürüm: "+v.replace("tanik-",""):""; }
 let updBusy=false;
 async function autoUpdateCheck(){ // açılışta ve ön plana gelişte sessiz kontrol
-  if(!PWA||updBusy||!navigator.onLine) return; updBusy=true;
+  if(!PWA||EMBED||updBusy||!navigator.onLine) return; updBusy=true;
   try{ const txt=await (await fetch("sw.js?t="+Date.now(),{cache:"no-store"})).text(); const m=txt.match(/SURUM\s*=\s*"([^"]+)"/);
     const remote=m?m[1]:"", cur=await curVersion();
     const old=$("#updBanner"); if(old) old.remove();
@@ -696,8 +709,30 @@ document.addEventListener("click",e=>{ const b=e.target.closest(".kb-tgl"); if(!
   const num=i.getAttribute("inputmode")==="numeric";
   if(num){ i.setAttribute("inputmode","text"); i.removeAttribute("pattern"); b.textContent="123"; } else { i.setAttribute("inputmode","numeric"); i.setAttribute("pattern","[0-9]*"); b.textContent="ABC"; }
   i.blur(); setTimeout(()=>i.focus(),60); },true);
-async function lockGate(){ if(!PWA || !(window.crypto&&crypto.subtle)) return; LOCK.cfg=lockCfgGet(); await lockScreen(LOCK.cfg?"unlock":"setup"); }
-async function lockNow(exit){ if(!LOCK.cfg) return; await flush(); const cur=exit?null:S.cur, tab=S.tab, view=exit?"home":S.view; if(exit) toast("Çıkış yapıldı"); LOCK.key=null; S.cur=null; S.photos=[]; S.audits=[];
+/* ================= yan yana iki denetim (masaüstü) ================= */
+const SPLIT={open:{}};
+function splitFlush(){ document.querySelectorAll(".split-pane iframe").forEach(f=>{ try{ f.contentWindow.postMessage({type:"flush"},location.origin); }catch(e){} }); return new Promise(r=>setTimeout(r,500)); }
+function splitWarn(){ const a=SPLIT.open[1], b=SPLIT.open[2]; const w=$("#splitWarn"); if(w) w.hidden=!(a&&b&&a===b); }
+function openSplit(){
+  S.view="split"; S.cur=null; SPLIT.open={};
+  $("#app").innerHTML=`<div class="split-bar"><b>${ICON.split}Yan yana iki denetim</b><span class="muted">Her bölmede ayrı bir denetim açın; kayıtlar otomatik saklanır.</span><span id="splitWarn" class="need" hidden>Aynı denetim iki bölmede açık — değişiklikler birbirinin üzerine yazabilir. Birini kapatın.</span><span class="sp"></span><button class="btn" id="splitClose">Tek görünüme dön</button>${LOCK.cfg?`<button class="btn" id="splitExit">${ICON.lock}Çıkış</button>`:""}</div>
+  <div class="split-wrap"><div class="split-pane"><iframe src="index.html?embed=1&p=1" title="Sol denetim" data-pane="1"></iframe></div><div class="split-pane"><iframe src="index.html?embed=1&p=2" title="Sağ denetim" data-pane="2"></iframe></div></div>`;
+  document.body.classList.add("split-on");
+}
+async function closeSplit(lock){ await splitFlush(); document.body.classList.remove("split-on"); S.view="home";
+  if(lock){ lockNow(true); return; } S.audits=await Store.list(); renderHome(); window.scrollTo(0,0); }
+window.addEventListener("message",e=>{
+  if(e.origin!==location.origin || !e.data || typeof e.data!=="object") return;
+  const m=e.data;
+  if(!EMBED && m.type==="need-key" && e.source){ e.source.postMessage({type:"key",key:LOCK.key,cfg:LOCK.cfg},location.origin); return; }
+  if(!EMBED && m.type==="opened"){ const fr=[...document.querySelectorAll(".split-pane iframe")].find(f=>f.contentWindow===e.source); if(fr){ SPLIT.open[fr.dataset.pane]=m.id||null; splitWarn(); } return; }
+  if(EMBED && m.type==="flush"){ flush(); return; }
+  if(EMBED && m.type==="lock"){ LOCK.key=null; $("#app").innerHTML=""; return; }
+});
+function embedKey(){ return new Promise(res=>{ const h=e=>{ if(e.origin===location.origin&&e.data&&e.data.type==="key"){ window.removeEventListener("message",h); LOCK.key=e.data.key||null; LOCK.cfg=e.data.cfg||null; res(); } };
+  window.addEventListener("message",h); window.parent.postMessage({type:"need-key"},location.origin); }); }
+async function lockGate(){ if(EMBED){ await embedKey(); return; } if(!PWA || !(window.crypto&&crypto.subtle)) return; LOCK.cfg=lockCfgGet(); await lockScreen(LOCK.cfg?"unlock":"setup"); }
+async function lockNow(exit){ if(!LOCK.cfg) return; if(S.view==="split"){ await splitFlush(); document.querySelectorAll(".split-pane iframe").forEach(f=>{ try{ f.contentWindow.postMessage({type:"lock"},location.origin); }catch(e){} }); document.body.classList.remove("split-on"); exit=true; } await flush(); const cur=exit?null:S.cur, tab=S.tab, view=exit?"home":S.view; if(exit) toast("Çıkış yapıldı"); LOCK.key=null; S.cur=null; S.photos=[]; S.audits=[];
   await lockScreen("unlock"); S.audits=await Store.list();
   if(view==="audit"&&cur){ const a=S.audits.find(x=>x.id===cur.id); if(a){ S.tab=tab; openAudit(a); return; } } renderHome(); }
 function lockChangePw(){
@@ -729,12 +764,12 @@ function renderHome(){
   $("#app").innerHTML = `
   <div class="wrap">
     <header class="home-top">
-      <div class="brand"><span class="brand-mark">${ICON.hook}</span><span class="eyebrow">TÜRKAK · ISO/IEC 17020 · Kaldırma İletme · Basınçlı Kap · Kazan</span>${LOCK.cfg?`<button class="btn exit-btn" id="exitBtn" aria-label="Uygulamadan çıkış">${ICON.lock}<span>Çıkış</span></button>`:""}</div>
+      <div class="brand"><span class="brand-mark">${ICON.hook}</span><span class="eyebrow">TÜRKAK · ISO/IEC 17020 · Kaldırma İletme · Basınçlı Kap · Kazan</span>${LOCK.cfg&&!EMBED?`<button class="btn exit-btn" id="exitBtn" aria-label="Uygulamadan çıkış">${ICON.lock}<span>Çıkış</span></button>`:""}</div>
       <h1>Tanık Denetim Saha Kaydı</h1>
       <p>Enspektörün saha faaliyetini madde madde izleyin, bulgu ve fotoğrafları anında kaydedin, bitince doldurulmuş çeklisti Excel, F701-056 raporunu Word olarak alın.</p>
       <span id="storeChip" class="chip"></span>
-      ${PWA?`<div class="upd-row"><button class="btn" id="updBtn">${ICON.refresh}<span>Güncellemeleri denetle</span></button><span class="ver num" id="verInfo"></span></div>`:""}
-      ${PWA && !isStandalone() ? (IS_MOBILE ? (/Android/i.test(navigator.userAgent||"") ? `<div class="install">Uygulama gibi kullanmak için Chrome’da sağ üstteki <b>⋮ menü</b>ye, ardından <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) seçeneğine dokunun. İnternet olmadan da çalışır.</div>` : `<div class="install">Uygulama gibi kullanmak için Safari’de <b>Paylaş</b> düğmesine, ardından <b>Ana Ekrana Ekle</b>’ye dokunun. İnternet olmadan da çalışır.</div>`) : `<div class="install">Bilgisayarda uygulama olarak kurmak için Edge veya Chrome’da adres çubuğunun sağındaki <b>Uygulamayı yükle</b> simgesine (ya da <b>⋯ menü → Uygulamalar → Bu siteyi uygulama olarak yükle</b>) tıklayın. Başlat menüsünden ve masaüstünden açılır, internet olmadan da çalışır.</div>`):""}
+      ${PWA&&!EMBED?`<div class="upd-row"><button class="btn" id="updBtn">${ICON.refresh}<span>Güncellemeleri denetle</span></button><span class="ver num" id="verInfo"></span>${!IS_MOBILE?`<button class="btn" id="splitBtn">${ICON.split}<span>Yan yana iki denetim</span></button>`:""}</div>`:""}
+      ${PWA && !EMBED && !isStandalone() ? (IS_MOBILE ? (/Android/i.test(navigator.userAgent||"") ? `<div class="install">Uygulama gibi kullanmak için Chrome’da sağ üstteki <b>⋮ menü</b>ye, ardından <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) seçeneğine dokunun. İnternet olmadan da çalışır.</div>` : `<div class="install">Uygulama gibi kullanmak için Safari’de <b>Paylaş</b> düğmesine, ardından <b>Ana Ekrana Ekle</b>’ye dokunun. İnternet olmadan da çalışır.</div>`) : `<div class="install">Bilgisayarda uygulama olarak kurmak için Edge veya Chrome’da adres çubuğunun sağındaki <b>Uygulamayı yükle</b> simgesine (ya da <b>⋯ menü → Uygulamalar → Bu siteyi uygulama olarak yükle</b>) tıklayın. Başlat menüsünden ve masaüstünden açılır, internet olmadan da çalışır.</div>`):""}
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
@@ -748,7 +783,7 @@ function renderHome(){
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
       <button class="btn ghost" id="importBtn">${ICON.up}Yedekten geri yükle</button>
-      ${LOCK.cfg?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Çıkış yap</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
+      ${LOCK.cfg&&!EMBED?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Çıkış yap</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
     </div>
   </div>`;
   renderChip();
@@ -801,6 +836,7 @@ function paintHomeRes(){ const el=$("#homeRes"); if(el) el.innerHTML=homeResHTML
 
 /* ================= denetim ekranı ================= */
 async function openAudit(a){
+  if(EMBED){ try{ window.parent.postMessage({type:"opened",id:a.id},location.origin); }catch(e){} }
   S.cur=a; S.q=""; S.searchOpen=false; S.view="audit"; S.tab=S.tab||"list"; S.confirmDel=false; S.photos=[]; S.saveState="";
   renderAudit(); window.scrollTo(0,0);
   S.photos=await Store.photos(a.id);
@@ -1686,7 +1722,10 @@ document.addEventListener("click",async e=>{
   const d=t.dataset;
   if(d.new){ const a=newAudit(d.new); S.audits.unshift(a); S.tab="cover"; Store.save(a); openAudit(a); return; }
   if(d.open){ const a=S.audits.find(x=>x.id===d.open); if(a){ S.tab="list"; S.filter="all"; openAudit(a);} return; }
-  if(t.id==="backBtn"){ await flush(); S.cur=null; S.audits=await Store.list(); renderHome(); window.scrollTo(0,0); return; }
+  if(t.id==="splitBtn"){ openSplit(); return; }
+  if(t.id==="splitClose"){ closeSplit(false); return; }
+  if(t.id==="splitExit"){ closeSplit(true); return; }
+  if(t.id==="backBtn"){ if(EMBED){ try{ window.parent.postMessage({type:"opened",id:null},location.origin); }catch(e){} } await flush(); S.cur=null; S.audits=await Store.list(); renderHome(); window.scrollTo(0,0); return; }
   if(d.tab){ setTab(d.tab); return; }
   if(t.id==="searchToggle"){ S.searchOpen=!S.searchOpen; if(!S.searchOpen) S.q=""; renderTab(); if(S.searchOpen){ const i=$("#listQ"); if(i) i.focus(); } return; }
   if(t.id==="listQClear"){ S.q=""; const i=$("#listQ"); if(i){ i.value=""; i.focus(); } $("#itemsBox").innerHTML=itemsBodyHTML(); paintListCount(); t.remove(); return; }
@@ -1770,7 +1809,7 @@ document.addEventListener("change",e=>{
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.target.id==="homeQ"||e.target.id==="listQ"||e.target.id==="eqQ")){ e.preventDefault(); e.target.blur(); } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") setTimeout(autoUpdateCheck,800); });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ LOCK.hiddenAt=Date.now(); }
-  else if(LOCK.cfg && LOCK.key && LOCK.hiddenAt && Date.now()-LOCK.hiddenAt>LOCK.AUTO_MIN*60000 && !document.querySelector(".lock")){ LOCK.hiddenAt=0; lockNow(); return; } });
+  else if(!EMBED && LOCK.cfg && LOCK.key && LOCK.hiddenAt && Date.now()-LOCK.hiddenAt>LOCK.AUTO_MIN*60000 && !document.querySelector(".lock")){ LOCK.hiddenAt=0; lockNow(); return; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flush(); else if(S.view==="audit"){ try{ navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){} } });
 window.addEventListener("pagehide",()=>{ flush(); });
 

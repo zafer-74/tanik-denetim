@@ -55,6 +55,11 @@ Klasörü sunucuda bir dizine (örn. `https://kurum.gov.tr/tanik/`) olduğu gibi
 3. Uygulama kendi penceresinde açılır; Başlat menüsünde ve isterseniz masaüstünde / görev çubuğunda kısayolu olur.
    İnternet olmadan da çalışır. Güncellemeler için ana ekrandaki **Güncellemeleri denetle** düğmesini kullanın.
 
+### Yan yana iki denetim (yalnız bilgisayar)
+Ana ekrandaki **Yan yana iki denetim** düğmesi ekranı ikiye böler; her bölmede ayrı bir denetim açılıp doldurulabilir
+(şifre bir kez sorulur). Aynı denetim iki bölmede birden açılırsa üstte uyarı çıkar. **Tek görünüme dön** ile normal
+görünüme geçilir; **Çıkış** her iki bölmeyi kaydedip uygulamayı kilitler.
+
 ### Telefon ↔ bilgisayar arasında denetim aktarma
 Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapılır.
 1. **Telefonda:** denetimi açın → **Özet** sekmesi → JSON yedeği (veya ana ekranda **Tüm kayıtları yedekle**)
