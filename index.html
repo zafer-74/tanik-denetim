@@ -76,6 +76,11 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .chip .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
 .chip.cloud .dot{background:var(--u)}
 .chip.local .dot{background:var(--warn)}
+.lock{padding-block:48px 24px;display:flex;flex-direction:column;gap:12px;max-width:440px;margin:0 auto}
+.lock h1{font-family:var(--f-display);font-weight:700;font-size:28px;line-height:1.1}
+.lock p{margin:0}
+.lock .fields{display:flex;flex-direction:column;gap:10px}
+.lock input{width:100%}
 .upd-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .upd-row .btn{min-height:40px}
 .upd-row .ver{font-size:12.5px;color:var(--muted)}
@@ -416,6 +421,7 @@ function hl(text,ts){
 }
 const DATE_ROWS = {9:true,17:true};
 const ICON = {
+  lock:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
   refresh:'<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
   back:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
   cover:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
@@ -444,6 +450,19 @@ function toast(msg){ const t=$("#toast"); t.textContent=msg; t.hidden=false; cle
 
 /* ================= depolama ================= */
 /* Yerel: IndexedDB (yoksa bellek). Bulut: claude db, kişiye özel data/users/<id>/ alanı. Her kayıt önce yerele yazılır. */
+/* ================= cihaz şifre kilidi (AES-GCM, PBKDF2) ================= */
+const LOCK={key:null,cfg:null,hiddenAt:0,AUTO_MIN:5};
+const b64e=buf=>{ const u=new Uint8Array(buf); let s=""; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); return btoa(s); };
+const b64d=str=>{ const s=atob(str); const u=new Uint8Array(s.length); for(let i=0;i<s.length;i++) u[i]=s.charCodeAt(i); return u; };
+function lockCfgGet(){ try{ return JSON.parse(localStorage.getItem("tanikLock")||"null"); }catch(e){ return null; } }
+function lockCfgSet(c){ try{ localStorage.setItem("tanikLock",JSON.stringify(c)); return true; }catch(e){ return false; } }
+async function deriveKey(pw,salt,iter){ const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:iter,hash:"SHA-256"},base,{name:"AES-GCM",length:256},false,["encrypt","decrypt"]); }
+async function encWith(key,obj){ const iv=crypto.getRandomValues(new Uint8Array(12)); const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},key,new TextEncoder().encode(JSON.stringify(obj))); return {iv:b64e(iv),d:b64e(ct)}; }
+async function decWith(key,e){ const pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(e.iv)},key,b64d(e.d)); return JSON.parse(new TextDecoder().decode(pt)); }
+async function sealA(a){ if(!LOCK.key) return a; const e=await encWith(LOCK.key,a); return {id:a.id,enc:1,iv:e.iv,d:e.d}; }
+async function sealP(p){ if(!LOCK.key) return p; const e=await encWith(LOCK.key,p); return {id:p.id,auditId:p.auditId,enc:1,iv:e.iv,d:e.d}; }
+async function openRec(r){ if(!r||!r.enc) return r; if(!LOCK.key) return null; try{ return await decWith(LOCK.key,r); }catch(e){ return null; } }
 const Local = (()=>{
   let dbp=null; const mem={audits:new Map(),photos:new Map()};
   function open(){
@@ -464,13 +483,17 @@ const Local = (()=>{
     }));
   }
   return {
-    async all(){ const d=await open(); if(!d) return [...mem.audits.values()];
-      return new Promise(res=>{ try{ const r=d.transaction("audits").objectStore("audits").getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]);}catch(e){res([])} }); },
-    async put(a){ const d=await open(); if(!d){mem.audits.set(a.id,a);return;} await tx("audits","readwrite",s=>s.put(a)); },
+    async raw(store){ const d=await open(); if(!d) return [...(store==="audits"?mem.audits:mem.photos).values()];
+      return new Promise(res=>{ try{ const r=d.transaction(store).objectStore(store).getAll(); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]);}catch(e){res([])} }); },
+    async all(){ const rs=await this.raw("audits"); return (await Promise.all(rs.map(openRec))).filter(Boolean); },
+    async put(a){ if(LOCK.cfg&&!LOCK.key) return; const d=await open(); if(!d){mem.audits.set(a.id,a);return;} const v=await sealA(a); await tx("audits","readwrite",s=>s.put(v)); },
     async del(id){ const d=await open(); if(!d){mem.audits.delete(id);return;} await tx("audits","readwrite",s=>s.delete(id)); },
     async photos(auditId){ const d=await open(); if(!d) return [...mem.photos.values()].filter(p=>p.auditId===auditId);
-      return new Promise(res=>{ try{ const r=d.transaction("photos").objectStore("photos").index("audit").getAll(auditId); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]);}catch(e){res([])} }); },
-    async putPhoto(p){ const d=await open(); if(!d){mem.photos.set(p.id,p);return;} await tx("photos","readwrite",s=>s.put(p)); },
+      const rs=await new Promise(res=>{ try{ const r=d.transaction("photos").objectStore("photos").index("audit").getAll(auditId); r.onsuccess=()=>res(r.result||[]); r.onerror=()=>res([]);}catch(e){res([])} });
+      return (await Promise.all(rs.map(openRec))).filter(Boolean); },
+    async putPhoto(p){ if(LOCK.cfg&&!LOCK.key) return; const d=await open(); if(!d){mem.photos.set(p.id,p);return;} const v=await sealP(p); await tx("photos","readwrite",s=>s.put(v)); },
+    async putRaw(store,v){ await tx(store,"readwrite",s=>s.put(v)); },
+    async wipe(){ const d=await open(); if(d){ try{ d.close(); }catch(e){} } dbp=null; await new Promise(res=>{ try{ const r=indexedDB.deleteDatabase("tanik-saha"); r.onsuccess=r.onerror=r.onblocked=()=>res(); }catch(e){ res(); } }); },
     async delPhoto(id){ const d=await open(); if(!d){mem.photos.delete(id);return;} await tx("photos","readwrite",s=>s.delete(id)); }
   };
 })();
@@ -596,6 +619,78 @@ function photoChooser(){
   v.addEventListener("click",e=>{ const b=e.target.closest("[data-ph]"); if(e.target===v||(b&&b.dataset.ph==="x")){ v.remove(); return; } if(!b) return;
     const i=$(b.dataset.ph==="cam"?"#cameraInput":"#photoInput"); v.remove(); i.value=""; i.click(); });
 }
+const CHECK_TXT="tanik-kilit-ok";
+async function lockReencrypt(newKey){ // tüm kayıtları (eski anahtar/şifresiz) okuyup yeni anahtarla yaz
+  const As=await Local.raw("audits"), Ps=await Local.raw("photos");
+  const plainA=(await Promise.all(As.map(openRec))).filter(Boolean), plainP=(await Promise.all(Ps.map(openRec))).filter(Boolean);
+  const old=LOCK.key; LOCK.key=newKey;
+  for(const a of plainA) await Local.putRaw("audits",await sealA(a));
+  for(const p of plainP) await Local.putRaw("photos",await sealP(p));
+  return {a:plainA.length,p:plainP.length,lost:(As.length-plainA.length)+(Ps.length-plainP.length),old};
+}
+async function lockSetup(pw){
+  const salt=crypto.getRandomValues(new Uint8Array(16)), iter=250000;
+  const key=await deriveKey(pw,salt,iter); const check=await encWith(key,CHECK_TXT);
+  const r=await lockReencrypt(key);
+  LOCK.cfg={v:1,salt:b64e(salt),iter,check}; if(!lockCfgSet(LOCK.cfg)) throw new Error("ayar kaydedilemedi");
+  return r;
+}
+async function lockTry(pw){ const c=LOCK.cfg; const key=await deriveKey(pw,b64d(c.salt),c.iter); try{ if(await decWith(key,c.check)===CHECK_TXT){ LOCK.key=key; return true; } }catch(e){} return false; }
+function lockScreen(mode){ // mode: "setup" | "unlock"
+  return new Promise(resolve=>{
+    const setup=mode==="setup";
+    $("#app").innerHTML=`<div class="wrap"><section class="lock">
+      <div class="brand"><span class="brand-mark">${ICON.hook}</span><span class="eyebrow">TÜRKAK · Tanık Denetim Saha Kaydı</span></div>
+      <h1>${setup?"Uygulama şifresi belirleyin":"Şifre ile giriş"}</h1>
+      <p class="muted">${setup?"Denetim kayıtları ve fotoğraflar bu cihazda bu şifreyle şifrelenerek saklanır. Şifre yalnızca bu cihazdadır; <b>unutulursa kayıtlar açılamaz</b>, ancak JSON yedeğinden geri yüklenebilir.":"Kayıtlarınız şifrelidir. Devam etmek için uygulama şifrenizi girin."}</p>
+      <form id="lockForm" class="fields" autocomplete="off">
+        <div class="field"><label for="lkPw">${setup?"Yeni şifre (en az 6 karakter)":"Şifre"}</label><input id="lkPw" type="password" autocomplete="${setup?"new-password":"current-password"}" required></div>
+        ${setup?`<div class="field"><label for="lkPw2">Yeni şifre (tekrar)</label><input id="lkPw2" type="password" autocomplete="new-password" required></div>`:""}
+        <p id="lkMsg" class="need" hidden></p>
+        <button class="btn primary" id="lkGo" type="submit">${setup?"Şifreyi belirle ve kayıtları şifrele":"Giriş"}</button>
+      </form>
+      ${setup?"":`<button class="linkbtn" id="lkForgot" type="button">Şifremi unuttum</button>`}
+    </section></div>`;
+    const msg=t=>{ const m=$("#lkMsg"); m.textContent=t; m.hidden=!t; };
+    setTimeout(()=>{ const i=$("#lkPw"); if(i) i.focus(); },50);
+    $("#lockForm").onsubmit=async ev=>{ ev.preventDefault(); const pw=$("#lkPw").value; const go=$("#lkGo");
+      if(setup){ if(pw.length<6){ msg("Şifre en az 6 karakter olmalı."); return; } if(pw!==$("#lkPw2").value){ msg("Şifreler aynı değil."); return; }
+        go.disabled=true; go.textContent="Kayıtlar şifreleniyor…";
+        try{ const r=await lockSetup(pw); toast("Şifre belirlendi"+(r.a?" · "+r.a+" denetim şifrelendi":"")); resolve(); }catch(e){ console.error(e); msg("Şifre belirlenemedi. Tarayıcı depolamasına izin verildiğinden emin olun."); go.disabled=false; go.textContent="Şifreyi belirle ve kayıtları şifrele"; }
+      } else { go.disabled=true; go.textContent="Kontrol ediliyor…";
+        if(await lockTry(pw)) resolve(); else { msg("Şifre yanlış."); go.disabled=false; go.textContent="Giriş"; $("#lkPw").select(); } }
+    };
+    const fg=$("#lkForgot"); if(fg) fg.onclick=()=>{
+      const v=document.createElement("div"); v.className="sheet-back";
+      v.innerHTML=`<div class="sheet" role="dialog" aria-label="Şifremi unuttum"><b>Şifre sıfırlansın mı?</b><p class="muted" style="margin:0">Şifre kurtarılamaz. Sıfırlarsanız <span style="font-weight:700;color:var(--ud)">bu cihazdaki tüm denetim kayıtları ve fotoğraflar silinir</span>. Daha önce aldığınız JSON yedeğini yeni şifreyle geri yükleyebilirsiniz.</p><button class="btn" data-lk="wipe" style="color:var(--ud);border-color:var(--ud)">Kayıtları sil ve yeni şifre belirle</button><button class="btn primary" data-lk="x">Vazgeç</button></div>`;
+      document.body.appendChild(v);
+      v.addEventListener("click",async e=>{ const b=e.target.closest("[data-lk]"); if(e.target===v||(b&&b.dataset.lk==="x")){ v.remove(); return; } if(!b) return;
+        b.disabled=true; await Local.wipe(); try{ localStorage.removeItem("tanikLock"); }catch(err){} location.reload(); });
+    };
+  });
+}
+async function lockGate(){ if(!PWA || !(window.crypto&&crypto.subtle)) return; LOCK.cfg=lockCfgGet(); await lockScreen(LOCK.cfg?"unlock":"setup"); }
+async function lockNow(){ if(!LOCK.cfg) return; await flush(); const cur=S.cur, tab=S.tab, view=S.view; LOCK.key=null; S.cur=null; S.photos=[]; S.audits=[];
+  await lockScreen("unlock"); S.audits=await Store.list();
+  if(view==="audit"&&cur){ const a=S.audits.find(x=>x.id===cur.id); if(a){ S.tab=tab; openAudit(a); return; } } renderHome(); }
+function lockChangePw(){
+  const v=document.createElement("div"); v.className="sheet-back";
+  v.innerHTML=`<form class="sheet" role="dialog" aria-label="Şifreyi değiştir" id="cpForm"><b>Şifreyi değiştir</b>
+    <div class="field"><label for="cpOld">Mevcut şifre</label><input id="cpOld" type="password" autocomplete="current-password" required></div>
+    <div class="field"><label for="cpNew">Yeni şifre (en az 6 karakter)</label><input id="cpNew" type="password" autocomplete="new-password" required></div>
+    <div class="field"><label for="cpNew2">Yeni şifre (tekrar)</label><input id="cpNew2" type="password" autocomplete="new-password" required></div>
+    <p id="cpMsg" class="need" hidden></p><button class="btn primary" id="cpGo" type="submit">Değiştir</button><button class="btn" type="button" data-cp="x">Vazgeç</button></form>`;
+  document.body.appendChild(v);
+  const msg=t=>{ const m=$("#cpMsg"); m.textContent=t; m.hidden=!t; };
+  v.addEventListener("click",e=>{ if(e.target===v||e.target.closest('[data-cp="x"]')) v.remove(); });
+  $("#cpForm").onsubmit=async ev=>{ ev.preventDefault(); const o=$("#cpOld").value,n=$("#cpNew").value,n2=$("#cpNew2").value;
+    if(n.length<6){ msg("Yeni şifre en az 6 karakter olmalı."); return; } if(n!==n2){ msg("Yeni şifreler aynı değil."); return; }
+    const go=$("#cpGo"); go.disabled=true; go.textContent="Kontrol ediliyor…";
+    const keep=LOCK.key; if(!(await lockTry(o))){ LOCK.key=keep; msg("Mevcut şifre yanlış."); go.disabled=false; go.textContent="Değiştir"; return; }
+    go.textContent="Kayıtlar yeni şifreyle şifreleniyor…";
+    try{ await flush(); await lockSetup(n); v.remove(); toast("Şifre değiştirildi"); }catch(e){ console.error(e); msg("Şifre değiştirilemedi."); go.disabled=false; go.textContent="Değiştir"; }
+  };
+}
 function renderChip(){ const el=$("#storeChip"); if(!el) return; el.className="chip "+(Cloud.ok?"cloud":"local"); el.innerHTML=`<span class="dot"></span>${Cloud.ok?"Kayıtlar hesabınızla senkronize":PWA?"Kayıtlar bu iPhone’da · düzenli JSON yedeği alın":"Kayıtlar yalnızca bu cihazda"}`; }
 function renderHome(){
   S.view="home";
@@ -626,6 +721,7 @@ function renderHome(){
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
       <button class="btn ghost" id="importBtn">${ICON.up}Yedekten geri yükle</button>
+      ${LOCK.cfg?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Kilitle</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
     </div>
   </div>`;
   renderChip();
@@ -1607,6 +1703,8 @@ document.addEventListener("click",async e=>{
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
+  if(t.id==="lockBtn"){ lockNow(); return; }
+  if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
   if(t.id==="delBtn"){ S.confirmDel=true; renderTab(); return; }
   if(t.id==="delNo"){ S.confirmDel=false; renderTab(); return; }
@@ -1636,6 +1734,8 @@ document.addEventListener("change",e=>{
   else if(e.target.id==="importInput" && e.target.files[0]){ importJSON(e.target.files[0]); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.target.id==="homeQ"||e.target.id==="listQ"||e.target.id==="eqQ")){ e.preventDefault(); e.target.blur(); } });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ LOCK.hiddenAt=Date.now(); }
+  else if(LOCK.cfg && LOCK.key && LOCK.hiddenAt && Date.now()-LOCK.hiddenAt>LOCK.AUTO_MIN*60000 && !document.querySelector(".lock")){ LOCK.hiddenAt=0; lockNow(); return; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flush(); else if(S.view==="audit"){ try{ navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){} } });
 window.addEventListener("pagehide",()=>{ flush(); });
 
@@ -1643,6 +1743,7 @@ window.addEventListener("pagehide",()=>{ flush(); });
 async function start(hot){
   if(PWA){ S.downloads={pwa:true}; try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
     if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} } }
+  await lockGate();
   S.audits=await Store.list(); renderHome();
   await initCloud();
   if(!PWA && window.claude && window.claude.use){ try{ S.downloads=await window.claude.use("downloads"); }catch(e){} }

@@ -1,5 +1,5 @@
 /* Tanık Denetim – çevrimdışı çalışma. Yeni sürüm yüklerken SURUM değerini artırın. */
-const SURUM = "tanik-v20";
+const SURUM = "tanik-v21";
 const CEKIRDEK = ["./", "./index.html", "./manifest.webmanifest", "./exceljs.min.js", "./jszip.min.js", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
