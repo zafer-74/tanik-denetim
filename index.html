@@ -83,6 +83,8 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .lock input{width:100%}
 .home-top .brand{display:flex;align-items:center;gap:10px}
 .exit-btn{margin-left:auto;min-height:38px;padding:0 12px;font-size:14px;gap:6px;flex:none}
+.upd-banner{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);z-index:60;display:flex;align-items:center;gap:10px;justify-content:space-between;padding:10px 12px;border-radius:var(--r);background:var(--ink);color:var(--bg);box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:560px;margin:0 auto;font-size:14px}
+.upd-banner .btn{min-height:38px;flex:none}
 .upd-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .upd-row .btn{min-height:40px}
 .upd-row .ver{font-size:12.5px;color:var(--muted)}
@@ -591,6 +593,17 @@ function isStandalone(){ try{ return !!(navigator.standalone || matchMedia("(dis
 /* ================= güncelleme ================= */
 async function curVersion(){ try{ const ks=await caches.keys(); const v=ks.filter(k=>/^tanik-v\d+$/.test(k)).sort((a,b)=>+b.slice(7)-+a.slice(7))[0]; return v||""; }catch(e){ return ""; } }
 async function fillVersion(){ const el=$("#verInfo"); if(!el) return; const v=await curVersion(); el.textContent=v?"Yüklü sürüm: "+v.replace("tanik-",""):""; }
+let updBusy=false;
+async function autoUpdateCheck(){ // açılışta ve ön plana gelişte sessiz kontrol
+  if(!PWA||updBusy||!navigator.onLine) return; updBusy=true;
+  try{ const txt=await (await fetch("sw.js?t="+Date.now(),{cache:"no-store"})).text(); const m=txt.match(/SURUM\s*=\s*"([^"]+)"/);
+    const remote=m?m[1]:"", cur=await curVersion();
+    const old=$("#updBanner"); if(old) old.remove();
+    if(remote && remote!==cur){ const b=document.createElement("div"); b.id="updBanner"; b.className="upd-banner";
+      b.innerHTML=`<span>Yeni sürüm hazır (${esc(remote.replace("tanik-",""))}).</span><button class="btn primary" id="updNow">Şimdi güncelle</button>`;
+      document.body.appendChild(b); b.querySelector("#updNow").onclick=()=>{ b.remove(); checkUpdate(); }; }
+  }catch(e){} finally{ updBusy=false; }
+}
 async function checkUpdate(){
   const btn=$("#updBtn"); const lab=btn&&btn.querySelector("span");
   if(!navigator.onLine){ toast("İnternet bağlantısı yok. Güncelleme için internete bağlanın."); return; }
@@ -1736,6 +1749,7 @@ document.addEventListener("change",e=>{
   else if(e.target.id==="importInput" && e.target.files[0]){ importJSON(e.target.files[0]); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.target.id==="homeQ"||e.target.id==="listQ"||e.target.id==="eqQ")){ e.preventDefault(); e.target.blur(); } });
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") setTimeout(autoUpdateCheck,800); });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden"){ LOCK.hiddenAt=Date.now(); }
   else if(LOCK.cfg && LOCK.key && LOCK.hiddenAt && Date.now()-LOCK.hiddenAt>LOCK.AUTO_MIN*60000 && !document.querySelector(".lock")){ LOCK.hiddenAt=0; lockNow(); return; } });
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="hidden") flush(); else if(S.view==="audit"){ try{ navigator.wakeLock&&navigator.wakeLock.request("screen").catch(()=>{}); }catch(e){} } });
@@ -1745,6 +1759,7 @@ window.addEventListener("pagehide",()=>{ flush(); });
 async function start(hot){
   if(PWA){ S.downloads={pwa:true}; try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
     if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} } }
+  setTimeout(autoUpdateCheck,2500);
   await lockGate();
   S.audits=await Store.list(); renderHome();
   await initCloud();
