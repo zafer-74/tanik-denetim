@@ -6,7 +6,7 @@ ana ekrana eklenir; tam ekran açılır ve internet olmadan da çalışır.
 ## Klasördeki dosyalar
 | Dosya | Görevi |
 |---|---|
-| index.html | Uygulamanın kendisi (11 çeklist, Excel ve F701-056 şablonları içinde) |
+| index.html | Uygulamanın kendisi (57 çeklist: 43 kaldırma-iletme, 8 basınçlı kap, 6 kazan; Excel ve F701-056 şablonları içinde) |
 | sw.js | Çevrimdışı çalışmayı sağlar |
 | manifest.webmanifest | Uygulama adı, simge ve tam ekran ayarı |
 | exceljs.min.js, jszip.min.js | Excel ve Word dosyası üretimi (internet gerekmeden) |

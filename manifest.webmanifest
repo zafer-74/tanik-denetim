@@ -1,7 +1,7 @@
 {
   "name": "Tanık Denetim Saha Kaydı",
   "short_name": "Tanık Denetim",
-  "description": "TÜRKAK kaldırma-iletme ekipmanları tanık denetimi saha kayıt uygulaması",
+  "description": "TÜRKAK kaldırma-iletme, basınçlı kap ve kazan tanık denetimi saha kayıt uygulaması",
   "lang": "tr",
   "start_url": "./",
   "scope": "./",
