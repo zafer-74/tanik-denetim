@@ -78,8 +78,8 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
 ## 3b. Uygulama şifresi (cihaz kilidi)
 - İlk açılışta her kullanıcı kendi cihazı için **en az 6 karakterli** bir şifre belirler. Denetim kayıtları ve fotoğraflar
   cihazda bu şifreyle **şifrelenerek** (AES-256) saklanır; mevcut kayıtlar şifre belirlenirken otomatik şifrelenir.
-- Uygulama her açılışta ve **5 dakikadan uzun** arka planda kaldıktan sonra şifre ister. Ana ekrandaki **Kilitle**
-  düğmesiyle hemen kilitlenebilir, **Şifreyi değiştir** ile şifre değiştirilebilir.
+- Uygulama her açılışta ve **5 dakikadan uzun** arka planda kaldıktan sonra şifre ister. Ana ekrandaki **Çıkış**
+  düğmesiyle (ana ekranın sağ üstünde ve altında **Çıkış**) hemen çıkılır, **Şifreyi değiştir** ile şifre değiştirilebilir.
 - Şifre yalnızca o cihazdadır ve **kurtarılamaz**. Unutulursa giriş ekranındaki **Şifremi unuttum** ile o cihazdaki
   kayıtlar silinip yeni şifre belirlenir; kayıtlar ancak daha önce alınmış JSON yedeğinden geri gelir. Düzenli yedek alın.
 - JSON yedek dosyası şifresizdir; OneDrive vb. güvenli bir yerde saklayın.

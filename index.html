@@ -81,6 +81,8 @@ h1,h2,h3{text-wrap:balance;margin:0}
 .lock p{margin:0}
 .lock .fields{display:flex;flex-direction:column;gap:10px}
 .lock input{width:100%}
+.home-top .brand{display:flex;align-items:center;gap:10px}
+.exit-btn{margin-left:auto;min-height:38px;padding:0 12px;font-size:14px;gap:6px;flex:none}
 .upd-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .upd-row .btn{min-height:40px}
 .upd-row .ver{font-size:12.5px;color:var(--muted)}
@@ -670,7 +672,7 @@ function lockScreen(mode){ // mode: "setup" | "unlock"
   });
 }
 async function lockGate(){ if(!PWA || !(window.crypto&&crypto.subtle)) return; LOCK.cfg=lockCfgGet(); await lockScreen(LOCK.cfg?"unlock":"setup"); }
-async function lockNow(){ if(!LOCK.cfg) return; await flush(); const cur=S.cur, tab=S.tab, view=S.view; LOCK.key=null; S.cur=null; S.photos=[]; S.audits=[];
+async function lockNow(exit){ if(!LOCK.cfg) return; await flush(); const cur=exit?null:S.cur, tab=S.tab, view=exit?"home":S.view; if(exit) toast("Çıkış yapıldı"); LOCK.key=null; S.cur=null; S.photos=[]; S.audits=[];
   await lockScreen("unlock"); S.audits=await Store.list();
   if(view==="audit"&&cur){ const a=S.audits.find(x=>x.id===cur.id); if(a){ S.tab=tab; openAudit(a); return; } } renderHome(); }
 function lockChangePw(){
@@ -702,7 +704,7 @@ function renderHome(){
   $("#app").innerHTML = `
   <div class="wrap">
     <header class="home-top">
-      <div class="brand"><span class="brand-mark">${ICON.hook}</span><span class="eyebrow">TÜRKAK · ISO/IEC 17020 · Kaldırma İletme · Basınçlı Kap · Kazan</span></div>
+      <div class="brand"><span class="brand-mark">${ICON.hook}</span><span class="eyebrow">TÜRKAK · ISO/IEC 17020 · Kaldırma İletme · Basınçlı Kap · Kazan</span>${LOCK.cfg?`<button class="btn exit-btn" id="exitBtn" aria-label="Uygulamadan çıkış">${ICON.lock}<span>Çıkış</span></button>`:""}</div>
       <h1>Tanık Denetim Saha Kaydı</h1>
       <p>Enspektörün saha faaliyetini madde madde izleyin, bulgu ve fotoğrafları anında kaydedin, bitince doldurulmuş çeklisti Excel, F701-056 raporunu Word olarak alın.</p>
       <span id="storeChip" class="chip"></span>
@@ -721,7 +723,7 @@ function renderHome(){
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
       <button class="btn ghost" id="importBtn">${ICON.up}Yedekten geri yükle</button>
-      ${LOCK.cfg?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Kilitle</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
+      ${LOCK.cfg?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Çıkış yap</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
     </div>
   </div>`;
   renderChip();
@@ -1703,7 +1705,7 @@ document.addEventListener("click",async e=>{
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
-  if(t.id==="lockBtn"){ lockNow(); return; }
+  if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
   if(t.id==="delBtn"){ S.confirmDel=true; renderTab(); return; }
