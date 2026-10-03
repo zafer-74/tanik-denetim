@@ -42,6 +42,12 @@ Klasörü sunucuda bir dizine (örn. `https://kurum.gov.tr/tanik/`) olduğu gibi
 3. Listeyi aşağı kaydırıp **Ana Ekrana Ekle**'yi seçin → **Ekle**.
 4. Ana ekrandaki **Tanık Denetim** simgesiyle açın. Bundan sonra internet olmadan da çalışır.
 
+## 2a. Android telefona kurulum
+1. Adresi **Chrome** ile açın.
+2. Sağ üstteki **⋮** menüsü → **Uygulamayı yükle** (bazı telefonlarda **Ana ekrana ekle**) → **Yükle**.
+3. Uygulama ana ekranda ve uygulama listesinde görünür; tam ekran açılır ve internet olmadan da çalışır.
+   Excel / Word / JSON dosyaları Android paylaşım menüsüyle Drive, OneDrive, Gmail, WhatsApp vb. yerlere gönderilir.
+
 ## 2b. Windows bilgisayara kurulum (masaüstü uygulaması)
 1. Adresi **Microsoft Edge** veya **Google Chrome** ile açın.
 2. Adres çubuğunun sağındaki **Uygulamayı yükle** simgesine tıklayın
