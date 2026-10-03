@@ -42,6 +42,23 @@ Klasörü sunucuda bir dizine (örn. `https://kurum.gov.tr/tanik/`) olduğu gibi
 3. Listeyi aşağı kaydırıp **Ana Ekrana Ekle**'yi seçin → **Ekle**.
 4. Ana ekrandaki **Tanık Denetim** simgesiyle açın. Bundan sonra internet olmadan da çalışır.
 
+## 2b. Windows bilgisayara kurulum (masaüstü uygulaması)
+1. Adresi **Microsoft Edge** veya **Google Chrome** ile açın.
+2. Adres çubuğunun sağındaki **Uygulamayı yükle** simgesine tıklayın
+   (görünmüyorsa: **⋯ menü → Uygulamalar → Bu siteyi uygulama olarak yükle**) → **Yükle**.
+3. Uygulama kendi penceresinde açılır; Başlat menüsünde ve isterseniz masaüstünde / görev çubuğunda kısayolu olur.
+   İnternet olmadan da çalışır. Güncellemeler için ana ekrandaki **Güncellemeleri denetle** düğmesini kullanın.
+
+### Telefon ↔ bilgisayar arasında denetim aktarma
+Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapılır.
+1. **Telefonda:** denetimi açın → **Özet** sekmesi → JSON yedeği (veya ana ekranda **Tüm kayıtları yedekle**)
+   → Paylaş ile OneDrive'a / e-postaya kaydedin.
+2. **Bilgisayarda:** ana ekranda **Yedekten geri yükle** → JSON dosyasını seçin. Denetim fotoğraflarıyla birlikte gelir;
+   düzeltmeleri yapın, Excel / F701-056 Word çıktısını alın (dosyalar **İndirilenler** klasörüne kaydedilir).
+3. Düzeltilmiş hâli telefona geri almak için bilgisayarda yeniden JSON yedeği alıp telefonda **Yedekten geri yükle** yapın.
+- Aynı denetim iki cihazda da varsa **son düzenlenen** sürüm korunur: cihazdaki kayıt yedekteki kayıttan daha yeniyse
+  o kayıt atlanır ve uygulama bunu bildirir. Bu sayede eski bir yedek yeni düzeltmelerin üzerine yazılmaz.
+
 ## 3. Kullanım notları
 - **Kayıtlar telefonda saklanır.** Başka cihaza aktarmak veya güvenceye almak için ana ekrandaki
   **Tüm kayıtları yedekle (JSON)** düğmesini kullanın ve dosyayı OneDrive'a / Dosyalar'a kaydedin.
