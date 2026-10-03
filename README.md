@@ -55,7 +55,8 @@ Klasörü sunucuda bir dizine (örn. `https://kurum.gov.tr/tanik/`) olduğu gibi
 ## 4. Güncelleme
 1. Yeni `index.html` (ve değişen diğer dosyaları) aynı yere yükleyin.
 2. `sw.js` dosyasının ilk satırlarındaki `SURUM` değerini artırın (örn. `tanik-v1` → `tanik-v2`) ve yükleyin.
-3. Telefonlar uygulamayı internet varken açtığında yeni sürümü alır (gerekirse uygulamayı kapatıp yeniden açın).
+3. Telefonlar uygulamayı internet varken açtığında yeni sürümü alır. Hemen almak için ana ekranın üstündeki
+   **Güncellemeleri denetle** düğmesine dokunun (internet gerekir); yanında yüklü sürüm numarası görünür.
    Kayıtlar güncellemeden etkilenmez.
 
 ## 5. Yapay zekâ (isteğe bağlı)
