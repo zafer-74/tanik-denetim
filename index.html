@@ -578,7 +578,7 @@ function renderHome(){
   if(!S.downloads) $("#backupAll").hidden=true;
 }
 
-const EQ_SUBS={"1.A.1":"Vinç Grubu","1.A.3":"Mobil / Yükleyici Kren Grubu","1.A.5":"Yüzer Kren Grubu","1.A.6":"Kollu Kren Grubu","1.A.8":"El Tahrikli Vinç ve Çektirme Grubu","1.A.13":"Taşıt Kaldırma Donanımı ve Kriko Grubu","1.A.16":"Endüstriyel Araç (Forklift) Grubu","1.A.17":"Yürüyen Merdiven / Bant Grubu","1.A.19":"Güç Tahrikli Park Ettirme Teçhizatı Grubu","1.A.20":"Kablolu Taşıma Tesisatı Grubu"};
+const EQ_SUBS={"1.A.1":"Vinç Grubu","1.A.3":"Mobil / Yükleyici Kren Grubu","1.A.5":"Yüzer Kren Grubu","1.A.6":"Kollu Kren Grubu","1.A.8":"El Tahrikli Vinç ve Çektirme Grubu","1.A.13":"Taşıt Kaldırma Donanımı ve Kriko Grubu","1.A.16":"Endüstriyel Araç (Forklift) Grubu","1.A.17":"Yürüyen Merdiven / Bant Grubu","1.A.19":"Güç Tahrikli Park Ettirme Teçhizatı Grubu","1.A.20":"Kablolu Taşıma Tesisatı Grubu","2.A.1":"Otoklav ve Buharlı Kaplar Grubu","2.A.2":"Hava ve Genleşme Tankları Grubu","3.A.1":"Buhar Kazanları Grubu","3.A.2":"Kızgın Su ve Sıcak Su Kazanları Grubu"};
 const EQ_GROUPS=[{p:"1.",code:"1.A",name:"Kaldırma ve İletme"},{p:"2.",code:"2.A",name:"Basınçlı Kaplar"},{p:"3.",code:"3.A",name:"Kazanlar"}];
 function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
 function eqGridHTML(){
