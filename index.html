@@ -341,6 +341,18 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .auto-line .tag{padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line)}
 .auto-line .tag.edited{background:var(--warn-bg);color:var(--warn);border-color:transparent}
 .linkbtn{border:0;background:none;color:var(--steel);font-weight:600;font-size:12.5px;padding:4px 0;min-height:28px}
+.kalip{border:1px dashed var(--line);border-radius:9px;background:var(--surface-2)}
+.kalip>summary{list-style:none;cursor:pointer;padding:9px 12px;font-size:13.5px;font-weight:600;color:var(--steel);display:flex;align-items:center;gap:8px}
+.kalip>summary::-webkit-details-marker{display:none}
+.kalip>summary svg{width:16px;height:16px;flex:none}
+.kalip>summary .chev{margin-left:auto;transition:transform .15s;color:var(--muted)}
+.kalip[open]>summary .chev{transform:rotate(90deg)}
+.kalip .kf{display:grid;grid-template-columns:1fr;gap:8px;padding:4px 12px 12px}
+@media (min-width:700px){.kalip .kf{grid-template-columns:1fr 1fr}.kalip .kf .wide{grid-column:1/-1}}
+.kalip label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:3px}
+.kalip input,.kalip textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 10px;font-size:14px;min-height:0}
+.kalip .kbtn{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.kalip .kbtn .hint{margin:0;font-size:12.5px}
 .crit textarea{width:100%;min-height:86px;border:1px solid var(--line);border-radius:9px;background:var(--surface-2);padding:10px 12px;font-size:14px}
 .toggle{display:flex;align-items:center;gap:10px;min-height:32px}
 .toggle input{width:22px;height:22px;accent-color:var(--steel)}
@@ -1000,9 +1012,70 @@ function autoGenel(a){
 }
 function autoAlan(a){ const f=FORM_BY[a.code]; const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(", "); const alan=f.code.startsWith("2.")?"Basınçlı kaplar":f.code.startsWith("3.")?"Kazanlar":"Kaldırma ve iletme ekipmanları"; return alan+" – "+f.name+" ("+f.code+")\nPeriyodik kontrol"+(eq?"\n"+eq:""); }
 function repVal(a,k){ const r=rep(a); if(r[k]!==undefined&&r[k]!==null) return r[k];
-  if(k==="alan") return autoAlan(a); if(k==="std") return a.cover[27]||""; if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
+  if(k==="alan") return autoAlan(a); if(k==="personel") return ensNames(a,"\n"); if(k==="std") return a.cover[27]||""; if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
 function photoCount(no){ return S.photos.filter(p=>p.itemNo===no).length; }
 function thumbsFor(no){ const ph=S.photos.filter(p=>p.itemNo===no); return ph.length?`<div class="thumbs">${ph.map(p=>`<button class="thumb" data-photo="${p.id}" aria-label="Fotoğrafı aç"><img src="${p.data}" alt=""></button>`).join("")}</div>`:""; }
+/* ================= F701-056 doldurulabilir kalıplar (yorum cümleleri) ================= */
+function docOpts(a){ return String(rep(a).doclist||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); return p.length>=2?(p[0]+" "+p[1]+(p[2]?" ("+p[2]+")":"")):l; }); }
+const trD=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")?isoToTr(v):(v||"");
+const cihazSatir=(v,withCal)=>String(v||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); const ad=p[0]||"", sn=p[1]||"", sert=p[2]||"", tar=p[3]||"";
+  return ad+(sn?" (Seri No: "+sn+")":"")+(withCal&&(sert||tar)?" ("+[sert,tar].filter(Boolean).join(", ")+")":""); }).join(" / ");
+const bulguEk=(k,i)=>{ const no=(k["b"+i+"no"]||"").trim(), t=(k["b"+i+"t"]||"").trim(); return t?"\n"+(no?"Bulgu "+no+":":"Bulgu:")+"\n"+t:""; };
+const KALIP=[
+ {f:[["teklifTarih","Teklif/sözleşme tarihi","date"],["teklifNo","Teklif/sözleşme no","text","260109011-AKV-P-R00"],["teklifForm","Teklif/sözleşme formu (kod, ad, rev.)","doc","FR-101.0.0.029 Teklif/Sözleşme Formu (Rev19_17.01.2025)"],["isgId","İSG-KATİP sözleşme ID","text","23559324"],["isgBas","İSG-KATİP başlangıç","date"],["isgBit","İSG-KATİP bitiş","date"]],
+  b:k=>[k.teklifNo||k.teklifForm?`${k.teklifTarih?trD(k.teklifTarih)+" tarih ve ":""}${k.teklifNo?k.teklifNo+" teklif/sözleşme numaralı ":""}${k.teklifForm||"teklif/sözleşme"} kaydı görüldü.`:"",
+         k.isgId?`${k.isgId} sözleşme id ile ${k.isgBas||k.isgBit?trD(k.isgBas)+"-"+trD(k.isgBit)+" tarihlerini kapsayan ":""}İSG Katip sözleşmesi yaptığı görüldü.`:""]},
+ {f:[["isEmriProsedur","İş emri sistemini tanımlayan prosedür","doc","PR-104.1.7.001 İş Ekipmanları Periyodik Kontrol Ve Muayene Prosedürü (Rev05_29.01.2026)"],["isEmriMadde","Madde / başlık","text","4.1. Teknik Kontrol/Muayene Öncesi Teçhizata Erişim"],["isTakipNo","İş takip no","text","260619-413"],["isEmriForm","İş emri / görev formu","doc","FR-104.1.0.013 İş Emri-Saha Görev Formu (Rev03_06.04.2026)"]],
+  b:k=>[k.isEmriProsedur?`Kuruluş iş emri sistemini ${k.isEmriProsedur}${k.isEmriMadde?" madde "+k.isEmriMadde+" başlığı altında":""} tanımlamıştır.`:"",
+         k.isTakipNo||k.isEmriForm?`${k.isTakipNo?k.isTakipNo+" iş takip numarası ile ":""}${k.isEmriForm?k.isEmriForm+" ile ":""}muayene personellerini görevlendirdiği görüldü. Uzmanların iş emri sistemini bildiği ve uygun davrandığı görüldü.`:""]},
+ {f:[["erisimProsedur","Doküman erişimini tanımlayan prosedür","doc","PR-101.0.0.001 Dokümanların Kontrolü Prosedürü (Rev11_24.02.2025)"],["erisimMadde","Madde / başlık","text","5.7.7 Bulut Sistemine Erişim"],["erisimYontem","Erişim yöntemi","text","OneDrive üzerinden kendine ait kullanıcı adı ve şifre ile giriş yaparak"]],
+  b:k=>[k.erisimProsedur?`Kuruluş ${k.erisimProsedur}${k.erisimMadde?" madde "+k.erisimMadde+" başlığı altında":""} dokümanlara erişimi tanımlamıştır.`:"",
+         `Muayene uzmanları sahada ${k.erisimYontem?k.erisimYontem+" ":""}kalite dokümanlarına ve standartlara ulaşım sağlamışlardır.`]},
+ {f:[["isgOnlem","Sahada görülen önlemler","text","ekipmanın önüne bant çekilmesi, baret, yelek, çelik burunlu ayakkabı vb."],["isgTalimat","İş güvenliği talimatı","doc","Tlig-103.0.0.001 İş Güvenliği Talimatı (Rev04_27.03.2023)"]],
+  b:k=>[`Personelin gerekli çevresel güvenlik önlemlerini aldığı ve güvenlik ekipmanlarını kullandığı görüldü.${k.isgOnlem?" ("+k.isgOnlem+")":""}`,
+         k.isgTalimat?`Kuruluş ${k.isgTalimat} içeriğinde çevresel önlemler ve iş güvenliği önlemlerine ilişkin metotlar tanımlanmıştır.`:""]},
+ {f:[],b:k=>["Numune alma işlemi yapılmamaktadır."]},
+ {f:[["ucTalimat","Bilgi doğrulama talimatı","doc","TL-104.3.0.002 İş Ekipmanları Ve Tesisatlar Periyodik Kontrol Öncesi Hazırlık Talimatı (Rev04_10.04.2023)"],["ucMadde","Madde","text","4"],["ucSaha","Sahadaki doğrulama","text","Sahada doğrulamalar 10 ton kapasiteli dinamometre ile yapılmıştır. (Yük vb.)"]],
+  b:k=>[`Muayene personeli muayene faaliyetleri esnasında müşteri tarafından verilen bilgileri ${k.ucTalimat||"kuruluş talimatı"}${k.ucMadde?" Madde "+k.ucMadde+"’e":"’na"} göre doğrulamaktadır.`, k.ucSaha||""]},
+ {f:[["hazTalimat","Müşteri hazırlık talimatı","doc","TL-104.3.0.002 … Periyodik Kontrol Öncesi Hazırlık Talimatı (Rev04_10.04.2023)"],["hazForm","Teklif/sözleşme formu","doc"],["hazMadde","Formdaki madde","text","7.4"],["hazGenel","Genel hükümler (yayın yeri, kod, rev.)","text","web sitesinde yayınlı olan (https://…) FR.101.0.0.130 Genel Hükümler (Rev04_13.02.2024)"]],
+  b:k=>[`Müşteri tarafından muayene öncesi hazırlanacak önlemler ${[k.hazTalimat,k.hazForm?k.hazForm+(k.hazMadde?" madde "+k.hazMadde+"’de":""):""].filter(Boolean).join(" ve ")||"kuruluş dokümanlarında"}${k.hazGenel?" "+k.hazGenel+"de":""} tanımlanmıştır. Sahada uygulandığı görüldü.`]},
+ {f:[["hasarProsedur","Önleyici tedbirleri tanımlayan prosedür","doc"],["hasarMadde","Madde","text","4.1.4"]],
+  b:k=>[`${k.hasarProsedur?k.hasarProsedur+(k.hasarMadde?" madde "+k.hasarMadde:"")+" içeriğinde":"Kuruluş dokümanlarında"} muayeneden geçirilecek ilgili muayene kontrolleri kendi sorumluluğunda iken bunların bozulmasını veya hasar görmesini önlemek için önleyici tedbirleri tanımladığı görüldü. Sahada gerekli önlemlerin alındığı görülmüştür.`]},
+ {f:[["cihazlar","Cihazlar — her satıra: Ad | Seri No | Sertifika no | Kalibrasyon tarihi","area","Şeritmetre | 5.1.19-010 | AB-0068-K | 22.07.2025\nDinamometre | 5.1.28-001 | AB-0068-K | 19.06.2026"]],
+  b:k=>[cihazSatir(k.cihazlar,false)]},
+ {f:[["kalProsedur","Kalibrasyon/doğrulama prosedürü","doc","PR-101.0.0.014 Ölçme Ve Test Cihazlarının Kalibrasyon Ve Doğrulama Prosedürü (Rev11_03.02.2025)"],["cihazlar","Cihazlar (8. kriterle ortak) — Ad | Seri No | Sertifika no | Kalibrasyon tarihi","area"]],
+  b:k=>[`Kuruluş ${k.kalProsedur?k.kalProsedur+"’ne":"kalibrasyon ve doğrulama prosedürüne"} göre muayene öncesi kullanılacak cihazların uygunluk kontrolü yapmaktadır.`, cihazSatir(k.cihazlar,true)]},
+ {f:[["tarafForm","Tarafsızlık taahhütnamesi","doc","FR-101.0.0.067 Personel Gizlilik, Tarafsızlık ve Bağımsızlık Taahhütnamesi (Rev04_21.02.2024)"],["tarafImza","İmzalayanlar — her satıra: Ad Soyad | Tarih","area","Burak Güler | 01.10.2025"]],
+  b:k=>["Muayene personelinin, muayene faaliyetini tarafsız olarak yaptığı görülmüştür.",
+         k.tarafForm?`${k.tarafForm} imzalatılmaktadır.${String(k.tarafImza||"").split("\n").map(l=>l.split("|").map(x=>x.trim())).filter(p=>p[0]).map(p=>" "+p[0]+(p[1]?" "+p[1]+" tarihinde":"")+" imzaladığı görüldü.").join("")}`:""]},
+ {f:[["b11no","Bulgu no (YD ise)","text","10"],["b11t","Bulgu / bilgi eksikliği (YD ise)","area","Kanca değerlendirme kriterleri, kanca kapasite tespiti konusunda bilgi eksikliği görülmüştür."]],
+  b:(k,st)=>["Saha denetimlerinde gözlem ve genel mülakat yöntemleri kullanılarak personelin yetkinlik ve bilgi seviyesi ölçülmüştür.",
+         st==="YD"||(k.b11t||"").trim()?"Saha denetiminde sahada izlenen personellerin gözlemlenmesi sonucunda muayene şartları ile ilgili yeterli muayene yetkinliğine sahip olduğu görülmüş olmakla beraber aşağıda belirtilen konularda bilgi eksikliği bulunduğu tespit edilmiştir."+bulguEk(k,11)
+         :"Saha denetiminde sahada izlenen personellerin gözlemlenmesi sonucunda muayene şartları ile ilgili yeterli muayene yetkinliğine sahip olduğu görülmüştür."]},
+ {f:[["kayitForm","Saha kayıt / kontrol formu","doc","FR-104.3.6.004 Mobil Vinç / Yükleyici Kren Periyodik Kontrol Formu (Rev01_22.12.2025)"]],
+  b:k=>[`Muayene personelinin bilgi ve gözlemleri zamanında ${k.kayitForm?k.kayitForm+" ile ":""}kayıt altına aldığı görülmüştür.`]},
+ {f:[["kayitForm","Saha kayıt / kontrol formu (12. kriterle ortak)","doc"]],
+  b:k=>[`Personelin muayene kayıtlarını yeterli içerikte ${k.kayitForm?k.kayitForm+" ile ":""}oluşturduğu görülmüştür.`]},
+ {f:[["raporForm","Rapor formu","doc","RP-104.3.6.004 Mobil Vinç / Yükleyici Kren Periyodik Kontrol Raporu (Rev01_22.12.2025)"],["raporTarih","Rapor tarihi","date"],["raporNo","Rapor no","text","DTY26-483-PK-Ki-1.A.1.6-001"]],
+  b:k=>[`Personelin ${k.raporForm?k.raporForm+" ":"rapor formunu "}doldurduğu ve muayeneyi raporladığı görülmüştür.`, k.raporNo?`${k.raporTarih?trD(k.raporTarih)+" tarih ve ":""}${k.raporNo} rapor numarası ile rapor oluşturulmuştur.`:""]},
+];
+// 11. kriter dışındakilere de isteğe bağlı bulgu alanı
+KALIP.forEach((K,i)=>{ if(i!==11 && i!==4){ K.f.push(["b"+i+"no","Bulgu no (YD ise)","text"],["b"+i+"t","Bulgu metni (YD ise)","area"]); const ob=K.b; K.b=(k,st)=>{ const r=ob(k,st); return r.concat([bulguEk(k,i).replace(/^\n/,"")]); }; } });
+function kalipK(a){ const r=rep(a); if(!r.k) r.k={}; return r.k; }
+function kalipText(a,i){ const k=kalipK(a); const st=effRow(a,i).s; return KALIP[i].b(k,st).filter(x=>x&&String(x).trim()).join("\n"); }
+function kalipHTML(a,i){
+  const K=KALIP[i]; if(!K||!K.f.length) return "";
+  const k=kalipK(a); const filled=K.f.some(([key])=>(k[key]||"").trim());
+  const fi=([key,label,type,ph])=>{ const id="kf-"+i+"-"+key, v=k[key]||"";
+    if(type==="area") return `<div class="wide"><label for="${id}">${esc(label)}</label><textarea id="${id}" data-rk="${key}" rows="3" placeholder="${esc(ph||"")}">${esc(v)}</textarea></div>`;
+    if(type==="date") return `<div><label for="${id}">${esc(label)}</label><input id="${id}" type="date" data-rk="${key}" value="${esc(v)}"></div>`;
+    return `<div class="${type==="doc"?"wide":""}"><label for="${id}">${esc(label)}</label><input id="${id}" data-rk="${key}" value="${esc(v)}" placeholder="${esc(ph||"")}" autocomplete="off"${type==="doc"?' list="docDL"':""}></div>`; };
+  return `<details class="kalip"${filled?" open":""}><summary>${ICON.doc}Doldurulabilir alanlar (formdaki yorum kalıbı)<span class="chev">${ICON.chev}</span></summary><div class="kf">${K.f.map(fi).join("")}<div class="kbtn"><button class="btn" data-kalip="${i}">Alanlardan yorumu oluştur</button><p class="hint">Yorum kutusundaki metnin yerine geçer; sonra elle düzeltebilirsiniz.</p></div></div></details>`;
+}
+function kalipGenel(a){
+  const c=CRITERIA.map((_,i)=>effRow(a,i)); const yd=c.some(e=>e.s==="YD");
+  return "Muayene personellerinin muayene faaliyetlerini, oluşturulmuş olan form ve talimatlara uyumlu şekilde gerçekleştirdikleri, personellerinin izlenebilirlik/kalibrasyon hakkındaki bilgi seviyesi yeterli olduğu, muayene sürelerinin yeterli olduğu, kontroller sırasında iş güvenliği önlemlerinin alındığı, muayene personellerinin yapılan muayene işlemiyle ilgili temel bilgisinin bulunduğu, muhakeme bilgisine ve gerekli yetkinliğe sahip "+(yd?"olmasına karşın ekipman muayenesinde bilgi eksikliği olduğu gözlemlenmiştir. (Bulgular yukarıda belirtilmiştir.)":"olduğu gözlemlenmiştir.");
+}
 function repHTML(){
   const a=S.cur, r=rep(a);
   const fld=(k,label,opts={})=>{ const v=repVal(a,k); const id="rp-"+k; return `<div class="field"><label for="${id}">${label}</label>${opts.area?`<textarea id="${id}" data-rep="${k}" rows="${opts.rows||3}">${esc(v)}</textarea>`:`<input id="${id}" data-rep="${k}" ${opts.type?`type="${opts.type}"`:""} value="${esc(v)}" placeholder="${esc(opts.ph||"")}" autocomplete="off">`}</div>`; };
@@ -1011,6 +1084,7 @@ function repHTML(){
     return `<article class="crit" id="cr-${i}"><div class="crit-h"><span class="n num">${i+1}</span><h3>${esc(cr.tr)}</h3><span class="tech" title="Denetim tekniği">${esc(cr.tech)}</span></div>
       <div class="rseg" role="group" aria-label="Durum">${["Y","YD","UD"].map(v=>`<button data-rs="${i}" data-v="${v}" aria-pressed="${e.s===v}">${v}</button>`).join("")}</div>
       <div class="auto-line">${e.sEdited?`<span class="tag edited">Durum elle seçildi</span><span>Çeklist önerisi: ${e.auto.s||"boş"}</span>`:`<span class="tag">Durum çeklistten: ${e.auto.s||"boş"}</span>`}</div>
+      ${kalipHTML(a,i)}
       <textarea id="rc-${i}" data-rc="${i}" rows="3" placeholder="İlgili kayıtlar ve/veya yorum">${esc(e.c)}</textarea>
       ${thumbsFor("R"+(i+1))}
       <div class="item-tools"><button class="btn" data-addphoto="R${i+1}">${ICON.cam}Kanıt fotoğrafı${photoCount("R"+(i+1))?" ("+photoCount("R"+(i+1))+")":""}</button>${aiShown()?`<button class="btn ai-btn" data-aicrit="${i}">${ICON.spark}${photoCount("R"+(i+1))?"Fotoğraftan yorum yaz":"YZ ile yorum yaz"}</button>`:""}</div>
@@ -1018,6 +1092,7 @@ function repHTML(){
     </article>`; }).join("");
   const yd=CRITERIA.map((_,i)=>effRow(a,i)).filter(e=>e.s==="YD"&&!e.c.trim()).length;
   return `
+  <datalist id="docDL">${docOpts(a).map(o=>`<option value="${esc(o)}"></option>`).join("")}</datalist>
   <div class="form-id"><b>F701-056</b><span>Muayene Kuruluşları İçin Tanık Denetim Objektif Delil Kayıt Formu</span></div>
   <section class="group"><h2>Form başlığı</h2><div class="fields">
     ${fld("dosyaNo","Dosya No",{ph:"AB-0903-M"})}
@@ -1029,7 +1104,7 @@ function repHTML(){
   <section class="group"><h2>Tanık olunan</h2><div class="fields">
     ${fld("alan","Muayene alanı ve muayene türü",{area:true,rows:3})}
     <div class="field"><label class="toggle" for="rp-kg"><input type="checkbox" id="rp-kg" data-repchk="kapsamGen" ${r.kapsamGen?"checked":""}>Kapsam genişletme</label></div>
-    ${info("Muayene personeli",ensNames(a,", "))}
+    ${fld("personel","Muayene personeli (unvanıyla; her satıra bir kişi)",{area:true,rows:3})}
     ${fld("std","Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no",{area:true,rows:2})}
   </div></section>
   ${aiShown()?`<div class="ai-card"><p>Çeklistten gelen yorumları resmi rapor diline çevirin veya genel değerlendirme taslağı yazdırın.</p><div class="row"><button class="btn" id="aiReport">${ICON.spark}Yapay zekâ ile düzenle</button></div></div>`:""}
@@ -1046,7 +1121,7 @@ function repHTML(){
   </section>
   <section class="group"><h2>Genel değerlendirme</h2><div class="fields">
     ${fld("genel","Genel değerlendirme / Overall evaluation",{area:true,rows:7})}
-  </div>${r.genel!==undefined&&r.genel!==null?`<button class="linkbtn" data-greset="1">Kanaat ve çeklistten yeniden oluştur</button>`:""}</section>
+  </div><div class="item-tools" style="margin-top:8px"><button class="btn" data-kgenel="1">Formdaki kalıptan oluştur</button></div>${r.genel!==undefined&&r.genel!==null?`<button class="linkbtn" data-greset="1">Kanaat ve çeklistten yeniden oluştur</button>`:""}</section>
   <section class="group"><h2>İmzalar</h2><div class="fields">
     ${fld("teknik","Teknik uzman adı soyadı")}
     ${fld("lider","Ekip lideri / denetçi adı soyadı")}
@@ -1092,7 +1167,7 @@ async function buildDocx(a){
   // tanık olunan
   setCell(doc,cellAt(T[3],2,0),repVal(a,"alan"),{sz:18});
   setCell(doc,cellAt(T[3],2,1),r.kapsamGen?"☒":"☐",{center:true,sz:22});
-  setCell(doc,cellAt(T[3],2,2),ensNames(a,"\n")||a.cover[14]||"",{sz:18});
+  setCell(doc,cellAt(T[3],2,2),repVal(a,"personel")||a.cover[14]||"",{sz:18});
   setCell(doc,cellAt(T[3],2,3),repVal(a,"std"),{sz:18});
   // 15 kriter
   CRITERIA.forEach((_,i)=>{ const e=effRow(a,i); setCell(doc,cellAt(T[4],i+1,2),e.s,{center:true,b:true,sz:20}); setCell(doc,cellAt(T[4],i+1,3),e.c,{sz:16}); });
@@ -1527,6 +1602,8 @@ document.addEventListener("click",async e=>{
     if(rr.s==="-"){ rr.s=""; }
     touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(d.rreset!==undefined){ const rr=rep(S.cur).rows[+d.rreset]; if(rr) delete rr.c; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
+  if(d.kalip!==undefined){ const i=+d.kalip; const txt=kalipText(S.cur,i); const rr=rep(S.cur).rows[i]||(rep(S.cur).rows[i]={}); rr.c=txt; if(i===4&&!rr.s) rr.s="UD"; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast((i+1)+". kriterin yorumu alanlardan oluşturuldu"); return; }
+  if(d.kgenel){ rep(S.cur).genel=kalipGenel(S.cur); touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast("Genel değerlendirme kalıptan oluşturuldu"); return; }
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
@@ -1549,6 +1626,7 @@ document.addEventListener("input",e=>{
     const item=el.closest(".item"); const need=item&&item.querySelector(".need"); if(need&&el.value) need.remove(); }
   else if(el.dataset.top){ S.cur[el.dataset.top]=el.value; touch(); }
   else if(el.dataset.rep){ rep(S.cur)[el.dataset.rep]=el.value; touch(); }
+  else if(el.dataset.rk){ kalipK(S.cur)[el.dataset.rk]=el.value; document.querySelectorAll('[data-rk="'+el.dataset.rk+'"]').forEach(o=>{ if(o!==el) o.value=el.value; }); touch(); }
   else if(el.dataset.rc!==undefined){ const rr=rep(S.cur).rows[+el.dataset.rc]||(rep(S.cur).rows[+el.dataset.rc]={}); rr.c=el.value; touch(); }
 });
 document.addEventListener("change",e=>{
