@@ -120,3 +120,9 @@ Ana ekranda **7.A Asansörler (Periyodik Kontrol)** grubu altında dört çeklis
 
 Bölüm C'de listenin her ana maddesi bir satırdır; "Tamamını oku" ile kusur sınıfı, kontrol türü, örnekleme önceliği,
 tanıkta doğrulanacak husus ve yönetmelikteki alt kriterlerin tam metni açılır. İzlenmeyen maddeler **G (Gözlenmedi)** işaretlenir.
+
+## 7. Kablolu taşıma tesisatı çeklistleri (1.A.20.1–1.A.20.3) – Rev.1
+Teleferik, telesiyej ve teleski çeklistlerine **Bölüm F – Yabancı mevzuat karşılaştırmasından eklenen şartlar**
+(Avusturya SeilbG/SeilbÜV 2013/SchleppVO, Almanya, Fransa, İtalya, İsviçre, ABD ANSI B77.1, AB 2016/424) eklendi
+(teleferik 23, telesiyej 22, teleski 22 madde). Bölüm F bağlayıcıdır: U / UD / G / KD ile değerlendirilir, toplam ve uygunluk
+oranına dahildir. Excel çıktısında Kapak özetine F satırı ve **Ülke Karşılaştırma** sayfası eklenmiştir.
