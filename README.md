@@ -6,7 +6,7 @@ ana ekrana eklenir; tam ekran açılır ve internet olmadan da çalışır.
 ## Klasördeki dosyalar
 | Dosya | Görevi |
 |---|---|
-| index.html | Uygulamanın kendisi (57 çeklist: 43 kaldırma-iletme, 8 basınçlı kap, 6 kazan; Excel ve F701-056 şablonları içinde) |
+| index.html | Uygulamanın kendisi (61 çeklist: 43 kaldırma-iletme, 8 basınçlı kap, 6 kazan, 4 asansör periyodik kontrol – EK-5/A, EK-5/B, EK-6/A, EK-6/B; Excel ve F701-056 şablonları içinde) |
 | sw.js | Çevrimdışı çalışmayı sağlar |
 | manifest.webmanifest | Uygulama adı, simge ve tam ekran ayarı |
 | exceljs.min.js, jszip.min.js | Excel ve Word dosyası üretimi (internet gerekmeden) |
@@ -112,3 +112,11 @@ Notlar:
 - Kullanım ücreti API hesabına yansır. Haiku modeli en ekonomik seçenektir.
 - Yapay zekâ internet gerektirir; çevrimdışıyken diğer tüm özellikler çalışmaya devam eder.
 - Yapay zekâ yanıtları hatalı olabilir; rapora geçmeden önce kontrol edin.
+
+## 6. Asansör periyodik kontrol çeklistleri (7.A)
+Ana ekranda **7.A Asansörler (Periyodik Kontrol)** grubu altında dört çeklist bulunur:
+- **7.A.1.A / 7.A.1.B** – Elektrik tahrikli asansörler, Asansör İşletme, Bakım ve Periyodik Kontrol Yönetmeliği EK-5 ve EK-5/A (TS EN 81-1+A3 & TS EN 81-80) / EK-5/B (TS EN 81-20)
+- **7.A.2.A / 7.A.2.B** – Hidrolik tahrikli asansörler, EK-6 ve EK-6/A (TS EN 81-2+A3 & TS EN 81-80) / EK-6/B (TS EN 81-20)
+
+Bölüm C'de listenin her ana maddesi bir satırdır; "Tamamını oku" ile kusur sınıfı, kontrol türü, örnekleme önceliği,
+tanıkta doğrulanacak husus ve yönetmelikteki alt kriterlerin tam metni açılır. İzlenmeyen maddeler **G (Gözlenmedi)** işaretlenir.
