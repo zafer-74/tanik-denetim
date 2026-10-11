@@ -110,6 +110,8 @@ html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .audit-wrap .audit-card{padding-right:56px}
 .audit-del{position:absolute;top:8px;right:8px;z-index:2;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ud)}
 .audit-del:active{background:var(--ud-bg)}
+.audit-ph{position:absolute;top:56px;right:8px;z-index:2;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--steel)}
+.audit-ph:active{background:var(--line)}
 .audit-card .code{font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.04em;color:var(--steel)}
 .audit-card h3{font-size:16px;font-weight:600;grid-column:1/-1}
 .audit-card .meta{grid-column:1/-1;color:var(--muted);font-size:13.5px;min-width:0;overflow-wrap:anywhere}
@@ -766,7 +768,7 @@ function renderHome(){
   const aud=S.audits;
   const auditsHTML = aud.length ? aud.map(a=>{ const f=FORM_BY[a.code]; if(!f) return ""; const c=counts(a);
       const who=[a.cover[14],a.cover[10]].filter(Boolean).map(esc).join(" · ")||"Enspektör ve yer henüz girilmedi";
-      return `<div class="audit-wrap"><button class="audit-del" data-delaudit="${a.id}" aria-label="${esc(f.code+" "+f.name)} denetimini sil" title="Denetimi sil">${ICON.trash}</button><button class="audit-card" data-open="${a.id}"><span class="code">${esc(f.code)}</span>${sonucPill(a.sonuc)}<h3>${esc(f.name)}</h3><span class="meta">${who}<br><span class="num">${isoToTr(a.cover[9])||fmtDate(a.createdAt)} · ${c.total-c.empty}/${c.total} madde · ${c.UD} UD</span></span><div class="bar-slot" style="grid-column:1/-1">${barHTML(c)}</div></button></div>`; }).join("")
+      return `<div class="audit-wrap"><button class="audit-del" data-delaudit="${a.id}" aria-label="${esc(f.code+" "+f.name)} denetimini sil" title="Denetimi sil">${ICON.trash}</button>${S.downloads?`<button class="audit-ph" data-phzip="${a.id}" aria-label="${esc(f.code+" "+f.name)} fotoğraflarını toplu indir" title="Fotoğrafları toplu indir">${ICON.cam}</button>`:""}<button class="audit-card" data-open="${a.id}"><span class="code">${esc(f.code)}</span>${sonucPill(a.sonuc)}<h3>${esc(f.name)}</h3><span class="meta">${who}<br><span class="num">${isoToTr(a.cover[9])||fmtDate(a.createdAt)} · ${c.total-c.empty}/${c.total} madde · ${c.UD} UD</span></span><div class="bar-slot" style="grid-column:1/-1">${barHTML(c)}</div></button></div>`; }).join("")
     : `<div class="empty">Henüz kayıtlı tanık denetimi yok.<br>Aşağıdan ekipman türünü seçerek ilk denetimi başlatın.</div>`;
   $("#app").innerHTML = `
   <div class="wrap">
@@ -994,9 +996,10 @@ function sumHTML(){
     <div class="actions">
       ${S.downloads?`<button class="btn primary" id="xlsBtn">${ICON.xls}Excel çeklisti indir (TÜRKAK şablonu)</button>
       <button class="btn" data-tab="rep">${ICON.doc}F701-056 tanık denetim raporuna git</button>
+      <button class="btn" id="phZipBtn">${ICON.cam}Fotoğrafları toplu indir${S.photos.length?" ("+S.photos.length+")":""}</button>
       <button class="btn" id="jsonBtn">${ICON.save}Bu denetimi yedekle (JSON)</button>`:`<div class="empty">Dosya indirme bu görünümde kullanılamıyor. Sayfayı Claude uygulamasında veya claude.ai üzerinden açın.</div>`}
     </div>
-    <p class="hint">Excel dosyası orijinal çeklist şablonunu doldurur: kapak bilgileri, E sütununda U/UD/G/KD, G sütununda bulgu notları, özet formülleri ve fotoğraflar ayrı bir sayfada.</p>
+    <p class="hint">Excel dosyası orijinal çeklist şablonunu doldurur: kapak bilgileri, E sütununda U/UD/G/KD, G sütununda bulgu notları, özet formülleri ve fotoğraflar ayrı bir sayfada. "Fotoğrafları toplu indir" bu ekipmanın tüm fotoğraflarını madde numarasıyla adlandırıp tek ZIP dosyasında (fotoğraf listesiyle birlikte) verir.</p>
   </section>
   <section class="group"><h2>Kaydı sil</h2>
     ${S.confirmDel?`<div class="confirm"><b>Bu denetim ve fotoğrafları kalıcı olarak silinsin mi?</b><span class="muted">Bu işlem geri alınamaz.</span><div class="row"><button class="btn danger" id="delYes">Evet, sil</button><button class="btn" id="delNo">Vazgeç</button></div></div>`:`<button class="btn danger" id="delBtn">Denetimi sil</button>`}
@@ -1095,7 +1098,7 @@ async function buildXlsx(a,photos){
   wb.calcProperties.fullCalcOnLoad=true;
   return wb.xlsx.writeBuffer();
 }
-const MIME={xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",json:"application/json"};
+const MIME={xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",json:"application/json",zip:"application/zip"};
 function shareSheet(filename,data){
   const ext=filename.split(".").pop(); const blob=data instanceof Blob?new Blob([data],{type:MIME[ext]||"application/octet-stream"}):new Blob([data],{type:MIME[ext]||"text/plain"});
   const file=new File([blob],filename,{type:blob.type});
@@ -1120,6 +1123,51 @@ async function exportXlsx(){
     await saveFile(name,new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   }catch(e){ console.error(e); toast("Excel oluşturulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."); }
   if(btn){btn.disabled=false; btn.lastChild.textContent="Excel çeklisti indir (TÜRKAK şablonu)";}
+}
+/* --- fotoğrafları ekipman (denetim) bazında toplu indirme --- */
+function photoLabel(no){ return /^R\d/.test(no||"")?"Rapor_kriteri_"+no.slice(1):no==="RDOC"?"Dokuman_listesi":(no||"Foto"); }
+function photoTitle(f,no){ if(/^R\d/.test(no||"")) return "Rapor kriteri "+no.slice(1); if(no==="RDOC") return "Doküman listesi"; const it=allItems(f).find(x=>x.no===no); return it?it.t:""; }
+async function exportPhotosZip(a,btn){
+  const f=FORM_BY[a.code]; if(!f) return;
+  if(S.cur&&S.cur.id===a.id) await flush();
+  const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
+  if(btn){ btn.disabled=true; if(old!==null) lab.textContent="Fotoğraflar hazırlanıyor…"; }
+  try{
+    const ph=(await Store.photos(a.id)).filter(p=>p&&p.data).sort((x,y)=>(x.at||0)-(y.at||0));
+    if(!ph.length){ toast("Bu denetimde fotoğraf yok."); return; }
+    await ensureZip();
+    const base=[f.code,safeName(f.name),safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_");
+    const zip=new JSZip(); const dir=zip.folder(base); const seq={}; const files=[];
+    const csvq=v=>'"'+String(v??"").replace(/"/g,'""').replace(/\r?\n/g," ")+'"';
+    const rows=[["Dosya","Madde","Madde başlığı","Tarih","Saat","Açıklama"].map(csvq).join(";")];
+    for(const p of ph){
+      const m=/^data:image\/([a-z+]+);base64,(.+)$/i.exec(p.data); if(!m) continue;
+      const ext=/png/i.test(m[1])?"png":"jpg"; const key=safeName(photoLabel(p.itemNo))||"Foto"; seq[key]=(seq[key]||0)+1;
+      const cap=safeName(p.caption||"");
+      const fn=key+"_"+pad(seq[key])+(cap?"_"+cap:"")+"."+ext;
+      dir.file(fn,m[2],{base64:true,date:new Date(p.at||Date.now())});
+      files.push({fn,data:m[2],type:ext==="png"?"image/png":"image/jpeg"});
+      rows.push([fn,p.itemNo,photoTitle(f,p.itemNo),fmtDate(p.at),fmtTime(p.at),p.caption||""].map(csvq).join(";"));
+    }
+    if(!files.length){ toast("Fotoğraflar okunamadı."); return; }
+    dir.file("Fotograf_listesi.csv","﻿"+rows.join("\r\n"));
+    const blob=await zip.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
+    const zipName=base+"_Fotograflar.zip";
+    let imgs=null;
+    if(PWA&&IS_MOBILE&&navigator.canShare){
+      try{ imgs=files.map(x=>new File([b64buf(x.data)],x.fn,{type:x.type})); if(!navigator.canShare({files:imgs})) imgs=null; }catch(e){ imgs=null; }
+    }
+    if(!imgs){ await saveFile(zipName,blob); return; }
+    const mb=blob.size>1048576?(blob.size/1048576).toFixed(1).replace(".",",")+" MB":Math.max(1,Math.round(blob.size/1024))+" KB";
+    const v=document.createElement("div"); v.className="sheet-back";
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Fotoğraflar hazır"><b>Fotoğraflar hazır</b><span class="fname">${esc(f.code+" "+f.name)}</span><span class="muted num">${files.length} fotoğraf · ${mb}</span><button class="btn primary" data-pz="zip">${ICON.up}ZIP olarak paylaş / Dosyalara kaydet</button><button class="btn" data-pz="img">${ICON.cam}Fotoğrafları paylaş (Fotoğraflar'a kaydet)</button><button class="btn" data-pz="x">Kapat</button></div>`;
+    document.body.appendChild(v);
+    v.addEventListener("click",async e=>{ const b=e.target.closest("[data-pz]"); if(e.target===v||(b&&b.dataset.pz==="x")){ v.remove(); return; } if(!b) return;
+      if(b.dataset.pz==="zip"){ v.remove(); shareSheet(zipName,blob); return; }
+      try{ await navigator.share({files:imgs,title:f.code+" fotoğrafları"}); v.remove(); }
+      catch(err){ if(err&&err.name==="AbortError") return; toast("Paylaşılamadı; ZIP seçeneğini kullanın."); } });
+  }catch(e){ console.error(e); toast("Fotoğraflar paketlenemedi."); }
+  finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
 async function exportJSON(list){
   const out={app:"tanik-saha",version:1,exportedAt:new Date().toISOString(),audits:[]};
@@ -1761,6 +1809,7 @@ document.addEventListener("click",async e=>{
   if(d.time){ const inp=$("#cv28"); const now=fmtTime(Date.now()); const parts=(inp.value||"").split(/\s*-\s*/); if(d.time==="start") parts[0]=now; else { parts[0]=parts[0]||""; parts[1]=now; } inp.value=parts.filter((x,i)=>i===0||x).join(" - "); S.cur.cover[28]=inp.value; touch(); return; }
   if(d.sonuc){ S.cur.sonuc=(S.cur.sonuc===d.sonuc)?"":d.sonuc; touch(); document.querySelectorAll("[data-sonuc]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sonuc===S.cur.sonuc)); return; }
   if(t.id==="xlsBtn"){ exportXlsx(); return; }
+  if(t.id==="phZipBtn"){ exportPhotosZip(S.cur,t); return; }
   if(t.id==="copyOut"){ openCopyOut(); return; }
   if(t.id==="nextEmpty"){ goNextEmpty(); return; }
   if(t.id==="emptyList"||t.id==="emptyList2"){ openEmptyList(); return; }
@@ -1790,6 +1839,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
+  if(d.phzip){ const a=S.audits.find(x=>x.id===d.phzip); if(a) exportPhotosZip(a,null); return; }
   if(d.delaudit){ const a=S.audits.find(x=>x.id===d.delaudit); if(!a) return; const f=FORM_BY[a.code]; const c=counts(a);
     const v=document.createElement("div"); v.className="sheet-back";
     v.innerHTML=`<div class="sheet" role="dialog" aria-label="Denetimi sil"><b>Denetim silinsin mi?</b><p class="muted" style="margin:0"><span style="font-weight:700;color:var(--ink)">${esc(f.code+" "+f.name)}</span><br>${esc([a.cover[14],a.cover[10]].filter(Boolean).join(" · ")||"Enspektör ve yer girilmemiş")}<br>${esc(isoToTr(a.cover[9])||fmtDate(a.createdAt))} · ${c.total-c.empty}/${c.total} madde değerlendirilmiş</p><p class="muted" style="margin:0">Denetim ve fotoğrafları bu cihazdan <span style="font-weight:700;color:var(--ud)">kalıcı olarak silinir</span>; geri alınamaz.</p><button class="btn" data-dz="yes" style="color:var(--ud);border-color:var(--ud)">${ICON.trash}Evet, sil</button><button class="btn primary" data-dz="x">Vazgeç</button></div>`;

@@ -77,6 +77,11 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
 - **Excel ve Word dosyaları** "Paylaş / Dosyalara kaydet" ile iPhone paylaşım menüsünden
   Dosyalar, Mail, OneDrive, WhatsApp vb. yerlere gönderilir.
 - Uygulamayı iPhone'dan silmek, içindeki kayıtları da siler. Silmeden önce yedek alın.
+- **Fotoğrafları toplu indirme (ekipman bazında):** Denetimin **Özet** sekmesindeki **Fotoğrafları toplu indir** düğmesi
+  veya ana ekrandaki denetim kartının sağındaki **kamera** simgesi, o ekipmanın tüm fotoğraflarını tek ZIP dosyasında verir.
+  Dosyalar madde numarasıyla adlandırılır (ör. `C1_44_01.jpg`; açıklama varsa dosya adına eklenir) ve klasörde madde başlığı,
+  tarih/saat ve açıklamayı içeren `Fotograf_listesi.csv` bulunur. iPhone/Android'de ayrıca **Fotoğrafları paylaş** seçeneğiyle
+  fotoğraflar doğrudan Fotoğraflar uygulamasına / galeriye kaydedilebilir.
 - Fotoğraflar küçültülerek saklanır (yaklaşık 150–230 KB). Çok sayıda fotoğraf telefonda yer kaplar;
   kapanan denetimleri yedekleyip silebilirsiniz.
 
