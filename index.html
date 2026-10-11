@@ -782,6 +782,7 @@ function renderHome(){
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
+    ${aud.length&&S.downloads?`<button class="btn" id="allPhotosBtn" style="margin-top:10px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
     <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
     <div id="homeRes">${homeResHTML()}</div>
@@ -791,6 +792,7 @@ function renderHome(){
     ${PWA?`<div class="ai-card" style="margin-top:18px"><p><b style="color:var(--ink)">Yapay zekâ</b> · ${aiKey()?"Etkin – "+esc((AI_MODELS.find(m=>m[0]===aiModel())||[0,aiModel()])[1]):"Kapalı. Bulgu yazımı, kanaat ve rapor taslağı için API anahtarı ekleyin."}</p><div class="row"><button class="btn" id="aiSettings">${ICON.spark}Yapay zekâ ayarları</button></div></div>`:""}
     <div class="home-tools">
       <button class="btn ghost" id="backupAll">${ICON.save}Tüm kayıtları yedekle (JSON)</button>
+      ${aud.length&&S.downloads?`<button class="btn ghost" id="allPhotosBtn2">${ICON.cam}Tüm fotoğrafları indir (ekipman bazında)</button>`:""}
       <button class="btn ghost" id="importBtn">${ICON.up}Yedekten geri yükle</button>
       ${LOCK.cfg&&!EMBED?`<button class="btn ghost" id="lockBtn">${ICON.lock||""}Çıkış yap</button><button class="btn ghost" id="pwBtn">Şifreyi değiştir</button>`:""}
     </div>
@@ -1127,30 +1129,34 @@ async function exportXlsx(){
 /* --- fotoğrafları ekipman (denetim) bazında toplu indirme --- */
 function photoLabel(no){ return /^R\d/.test(no||"")?"Rapor_kriteri_"+no.slice(1):no==="RDOC"?"Dokuman_listesi":(no||"Foto"); }
 function photoTitle(f,no){ if(/^R\d/.test(no||"")) return "Rapor kriteri "+no.slice(1); if(no==="RDOC") return "Doküman listesi"; const it=allItems(f).find(x=>x.no===no); return it?it.t:""; }
+/* bir denetimin fotoğraflarını klasöre ekler; {n, folder} döner */
+async function addPhotosTo(zip,a,folder){
+  const f=FORM_BY[a.code]; const ph=(await Store.photos(a.id)).filter(p=>p&&p.data).sort((x,y)=>(x.at||0)-(y.at||0));
+  const seq={}; let n=0; const ents=[];
+  const csvq=v=>'"'+String(v??"").replace(/"/g,'""').replace(/\r?\n/g," ")+'"';
+  const rows=[["Dosya","Madde","Madde başlığı","Tarih","Saat","Açıklama"].map(csvq).join(";")]; const files=[];
+  for(const p of ph){
+    const m=/^data:image\/([a-z+]+);base64,(.+)$/i.exec(p.data); if(!m) continue;
+    const ext=/png/i.test(m[1])?"png":"jpg"; const key=safeName(photoLabel(p.itemNo))||"Foto"; seq[key]=(seq[key]||0)+1;
+    const cap=safeName(p.caption||""); const fn=key+"_"+pad(seq[key])+(cap?"_"+cap:"")+"."+ext;
+    ents.push([fn,m[2],new Date(p.at||Date.now())]); n++;
+    files.push({fn,data:m[2],type:ext==="png"?"image/png":"image/jpeg"});
+    rows.push([fn,p.itemNo,photoTitle(f,p.itemNo),fmtDate(p.at),fmtTime(p.at),p.caption||""].map(csvq).join(";"));
+  }
+  if(n){ (Array.isArray(zip)?zip:[zip]).forEach(z=>{ const d=z.folder(folder); ents.forEach(([fn,b64,dt])=>d.file(fn,b64,{base64:true,date:dt})); d.file("Fotograf_listesi.csv","\ufeff"+rows.join("\r\n")); }); }
+  return {n,files};
+}
+function photoBase(a){ const f=FORM_BY[a.code]; return [f.code,safeName(f.name),safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_"); }
+function sizeTxt(n){ return n>1048576?(n/1048576).toFixed(1).replace(".",",")+" MB":Math.max(1,Math.round(n/1024))+" KB"; }
 async function exportPhotosZip(a,btn){
   const f=FORM_BY[a.code]; if(!f) return;
   if(S.cur&&S.cur.id===a.id) await flush();
   const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
   if(btn){ btn.disabled=true; if(old!==null) lab.textContent="Fotoğraflar hazırlanıyor…"; }
   try{
-    const ph=(await Store.photos(a.id)).filter(p=>p&&p.data).sort((x,y)=>(x.at||0)-(y.at||0));
-    if(!ph.length){ toast("Bu denetimde fotoğraf yok."); return; }
     await ensureZip();
-    const base=[f.code,safeName(f.name),safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_");
-    const zip=new JSZip(); const dir=zip.folder(base); const seq={}; const files=[];
-    const csvq=v=>'"'+String(v??"").replace(/"/g,'""').replace(/\r?\n/g," ")+'"';
-    const rows=[["Dosya","Madde","Madde başlığı","Tarih","Saat","Açıklama"].map(csvq).join(";")];
-    for(const p of ph){
-      const m=/^data:image\/([a-z+]+);base64,(.+)$/i.exec(p.data); if(!m) continue;
-      const ext=/png/i.test(m[1])?"png":"jpg"; const key=safeName(photoLabel(p.itemNo))||"Foto"; seq[key]=(seq[key]||0)+1;
-      const cap=safeName(p.caption||"");
-      const fn=key+"_"+pad(seq[key])+(cap?"_"+cap:"")+"."+ext;
-      dir.file(fn,m[2],{base64:true,date:new Date(p.at||Date.now())});
-      files.push({fn,data:m[2],type:ext==="png"?"image/png":"image/jpeg"});
-      rows.push([fn,p.itemNo,photoTitle(f,p.itemNo),fmtDate(p.at),fmtTime(p.at),p.caption||""].map(csvq).join(";"));
-    }
-    if(!files.length){ toast("Fotoğraflar okunamadı."); return; }
-    dir.file("Fotograf_listesi.csv","﻿"+rows.join("\r\n"));
+    const base=photoBase(a); const zip=new JSZip(); const {n,files}=await addPhotosTo(zip,a,base);
+    if(!n){ toast("Bu denetimde fotoğraf yok."); return; }
     const blob=await zip.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
     const zipName=base+"_Fotograflar.zip";
     let imgs=null;
@@ -1158,14 +1164,54 @@ async function exportPhotosZip(a,btn){
       try{ imgs=files.map(x=>new File([b64buf(x.data)],x.fn,{type:x.type})); if(!navigator.canShare({files:imgs})) imgs=null; }catch(e){ imgs=null; }
     }
     if(!imgs){ await saveFile(zipName,blob); return; }
-    const mb=blob.size>1048576?(blob.size/1048576).toFixed(1).replace(".",",")+" MB":Math.max(1,Math.round(blob.size/1024))+" KB";
     const v=document.createElement("div"); v.className="sheet-back";
-    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Fotoğraflar hazır"><b>Fotoğraflar hazır</b><span class="fname">${esc(f.code+" "+f.name)}</span><span class="muted num">${files.length} fotoğraf · ${mb}</span><button class="btn primary" data-pz="zip">${ICON.up}ZIP olarak paylaş / Dosyalara kaydet</button><button class="btn" data-pz="img">${ICON.cam}Fotoğrafları paylaş (Fotoğraflar'a kaydet)</button><button class="btn" data-pz="x">Kapat</button></div>`;
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Fotoğraflar hazır"><b>Fotoğraflar hazır</b><span class="fname">${esc(f.code+" "+f.name)}</span><span class="muted num">${n} fotoğraf · ${sizeTxt(blob.size)}</span><button class="btn primary" data-pz="zip">${ICON.up}ZIP olarak paylaş / Dosyalara kaydet</button><button class="btn" data-pz="img">${ICON.cam}Fotoğrafları paylaş (Fotoğraflar'a kaydet)</button><button class="btn" data-pz="x">Kapat</button></div>`;
     document.body.appendChild(v);
     v.addEventListener("click",async e=>{ const b=e.target.closest("[data-pz]"); if(e.target===v||(b&&b.dataset.pz==="x")){ v.remove(); return; } if(!b) return;
       if(b.dataset.pz==="zip"){ v.remove(); shareSheet(zipName,blob); return; }
       try{ await navigator.share({files:imgs,title:f.code+" fotoğrafları"}); v.remove(); }
       catch(err){ if(err&&err.name==="AbortError") return; toast("Paylaşılamadı; ZIP seçeneğini kullanın."); } });
+  }catch(e){ console.error(e); toast("Fotoğraflar paketlenemedi."); }
+  finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
+}
+/* tüm ekipmanlar: her denetim için ayrı ZIP + (isteğe bağlı) hepsi tek ZIP'te ayrı klasörler */
+async function exportAllPhotos(btn){
+  const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
+  const say=t=>{ if(old!==null) lab.textContent=t; };
+  if(btn) btn.disabled=true;
+  try{
+    await flush(); await ensureZip();
+    const list=S.audits.filter(a=>FORM_BY[a.code]); const packs=[]; const used={}; let total=0;
+    const all=new JSZip(); const date=fmtDate(Date.now()).replace(/\./g,"");
+    for(let i=0;i<list.length;i++){ const a=list[i]; say("Hazırlanıyor… "+(i+1)+"/"+list.length);
+      let base=photoBase(a); used[base]=(used[base]||0)+1; if(used[base]>1) base+="_"+used[base];
+      const z=new JSZip(); const r=await addPhotosTo([z,all],a,base); if(!r.n) continue;
+      const blob=await z.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
+      packs.push({a,name:base+"_Fotograflar.zip",blob,n:r.n}); total+=r.n;
+    }
+    if(!packs.length){ toast("Hiçbir denetimde fotoğraf yok."); return; }
+    say("Paketleniyor…");
+    const allName="Tum_Ekipmanlar_Fotograflar_"+date+".zip";
+    const allBlob=await all.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
+    const sum=packs.reduce((x,p)=>x+p.blob.size,0);
+    const files=packs.map(p=>new File([p.blob],p.name,{type:"application/zip"}));
+    const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
+    const v=document.createElement("div"); v.className="sheet-back";
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Tüm fotoğraflar hazır"><b>Tüm fotoğraflar hazır</b>
+      <span class="muted num">${packs.length} ekipman · ${total} fotoğraf · ${sizeTxt(sum)}</span>
+      <div class="muted" style="font-size:13.5px;max-height:30vh;overflow:auto">${packs.map(p=>`<div class="num">• ${esc(FORM_BY[p.a.code].code+" "+FORM_BY[p.a.code].name)}${p.a.cover[14]?" – "+esc(p.a.cover[14]):""} <span style="opacity:.7">(${p.n})</span></div>`).join("")}</div>
+      ${S.downloads?`<button class="btn primary" data-pa="sep">${ICON.up}${canMulti?"Her ekipman ayrı ZIP – paylaş / Dosyalara kaydet":"Her ekipman ayrı ZIP olarak indir"} (${packs.length})</button>
+      <button class="btn" data-pa="one">${ICON.save}Tek ZIP – her ekipman ayrı klasörde</button>`:""}
+      <button class="btn" data-pa="x">Kapat</button></div>`;
+    document.body.appendChild(v);
+    v.addEventListener("click",async e=>{ const b=e.target.closest("[data-pa]"); if(e.target===v||(b&&b.dataset.pa==="x")){ v.remove(); return; } if(!b) return;
+      if(b.dataset.pa==="one"){ v.remove(); await saveFile(allName,allBlob); return; }
+      if(canMulti){ try{ await navigator.share({files,title:"Ekipman fotoğrafları"}); v.remove(); }catch(err){ if(err&&err.name==="AbortError") return; toast("Paylaşılamadı; tek ZIP seçeneğini kullanın."); } return; }
+      v.remove();
+      if(!PWA){ for(const p of packs){ await saveFile(p.name,p.blob); } return; }
+      for(const p of packs){ const u=URL.createObjectURL(p.blob); const x=document.createElement("a"); x.href=u; x.download=p.name; document.body.appendChild(x); x.click(); x.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000); await new Promise(r=>setTimeout(r,450)); }
+      toast(packs.length+" ZIP dosyası indirildi");
+    });
   }catch(e){ console.error(e); toast("Fotoğraflar paketlenemedi."); }
   finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
@@ -1836,6 +1882,7 @@ document.addEventListener("click",async e=>{
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
+  if(t.id==="allPhotosBtn"||t.id==="allPhotosBtn2"){ exportAllPhotos(t); return; }
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }

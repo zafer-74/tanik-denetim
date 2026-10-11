@@ -82,6 +82,10 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
   Dosyalar madde numarasıyla adlandırılır (ör. `C1_44_01.jpg`; açıklama varsa dosya adına eklenir) ve klasörde madde başlığı,
   tarih/saat ve açıklamayı içeren `Fotograf_listesi.csv` bulunur. iPhone/Android'de ayrıca **Fotoğrafları paylaş** seçeneğiyle
   fotoğraflar doğrudan Fotoğraflar uygulamasına / galeriye kaydedilebilir.
+- **Tüm ekipmanların fotoğrafları tek düğmeyle:** Ana ekranda **Denetimlerim** listesinin altındaki
+  **Tüm ekipmanların fotoğraflarını indir** düğmesi (ayrıca sayfanın altında) fotoğrafı olan her denetim için ayrı paket hazırlar:
+  **Her ekipman ayrı ZIP** (telefonda tek paylaşımla tüm ZIP'ler Dosyalar'a kaydedilir, bilgisayarda ayrı ayrı indirilir) veya
+  **Tek ZIP – her ekipman ayrı klasörde**. Fotoğrafı olmayan denetimler atlanır.
 - Fotoğraflar küçültülerek saklanır (yaklaşık 150–230 KB). Çok sayıda fotoğraf telefonda yer kaplar;
   kapanan denetimleri yedekleyip silebilirsiniz.
 
