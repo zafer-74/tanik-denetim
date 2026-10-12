@@ -1527,13 +1527,26 @@ async function buildDocx(a){
   sig(cellAt(T[5],0,1),repVal(a,"teknik"),dt); sig(cellAt(T[5],0,2),repVal(a,"lider"),dt);
   zip.file("word/document.xml",ser(doc));
   // üstbilgi: Dosya No AB - xxxx - Y
-  const dn=(repVal(a,"dosyaNo")||"").trim();
-  if(dn){ const h=await parse("word/header1.xml"); const tcs=[...h.getElementsByTagNameNS(WNS,"tc")];
-    const m=dn.match(/^(?:AB\s*-?\s*)?([0-9A-Za-z]+)\s*-\s*([A-Za-zÇĞİÖŞÜçğıöşü0-9]+)$/);
-    if(tcs.length>=4){ if(m){ setCell(h,tcs[2],m[1],{sz:20}); setCell(h,tcs[3],"- "+m[2],{sz:20}); } else { setCell(h,tcs[1],"",{}); setCell(h,tcs[2],dn,{sz:20}); setCell(h,tcs[3],"",{}); } }
+  // Şablon: [Dosya No:] [AB -] [……………] [-]  →  noktalar her durumda kaldırılır, "AB-0903-M" tek hücreye yazılır
+  { const dn=(repVal(a,"dosyaNo")||"").trim(); const p=dosyaNoParts(dn);
+    const h=await parse("word/header1.xml"); const tcs=[...h.getElementsByTagNameNS(WNS,"tc")];
+    if(tcs.length>=4){ // [AB -][……][-] hücreleri tek hücrede birleştirilir (dar hücrede "AB -" ikiye bölünüyordu)
+      const c1=tcs[1], tr=c1.parentNode; const pr=kids(c1,"tcPr")[0];
+      if(pr){ const w=kids(pr,"tcW")[0]; const sum=[1,2,3].reduce((n,i)=>{ const x=kids(tcs[i],"tcPr")[0]; const ww=x&&kids(x,"tcW")[0]; return n+(+(ww&&ww.getAttributeNS(WNS,"w"))||0); },0);
+        if(w&&sum) w.setAttributeNS(WNS,"w:w",String(sum));
+        kids(pr,"gridSpan").forEach(x=>pr.removeChild(x)); const gs=wEl(h,"gridSpan",{val:"3"}); if(w&&w.nextSibling) pr.insertBefore(gs,w.nextSibling); else pr.appendChild(gs); }
+      [tcs[2],tcs[3]].forEach(x=>{ if(x.parentNode===tr) tr.removeChild(x); });
+      kids(c1,"p").forEach(pp=>kids(pp,"pPr").forEach(pp2=>kids(pp2,"jc").forEach(j=>pp2.removeChild(j))));
+      setCell(h,c1,"AB-"+(p.no?p.no+(p.ek?"-"+p.ek:""):""),{sz:20}); }
     zip.file("word/header1.xml",ser(h)); }
   return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
 }
+/* Dosya No: "AB-0903-M", "AB/0903/M", "AB 0903 M", "0903-M", "AB-0903", "0903" → {no:"0903", ek:"M"} */
+function dosyaNoParts(dn){ let t=String(dn||"").replace(/[.…]+/g," ").trim(); if(!t) return {no:"",ek:""};
+  t=t.replace(/^AB(?=[\s\-\/_]|\d|$)/i,"").replace(/^[\s\-\/_]+/,"");
+  const parts=t.split(/[\s\-\/_]+/).filter(Boolean); if(!parts.length) return {no:"",ek:""};
+  if(parts.length===1) return {no:parts[0],ek:""};
+  return {no:parts.slice(0,-1).join("-"),ek:parts[parts.length-1]}; }
 function docxName(a){ const f=FORM_BY[a.code]; return ["F701-056",f.code,safeName(f.name),persInitials(a),isoToTr(repVal(a,"tarih")||a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx"; }
 /* tüm ekipmanların F701-056 Word raporları: her denetim ayrı .docx veya tek ZIP */
 async function exportAllDocx(btn){
