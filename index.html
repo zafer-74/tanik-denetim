@@ -782,7 +782,7 @@ function renderHome(){
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
-    ${aud.length&&S.downloads?`<button class="btn" id="allDocxBtn" style="margin-top:10px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (Word)</button><button class="btn" id="auditListBtn" style="margin-top:8px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
+    ${aud.length&&S.downloads?`<button class="btn" id="allDocxBtn" style="margin-top:10px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (Word)</button><button class="btn" id="allPdfBtn" style="margin-top:8px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (PDF)</button><button class="btn" id="auditListBtn" style="margin-top:8px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
     <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
     <div id="homeRes">${homeResHTML()}</div>
@@ -1100,7 +1100,7 @@ async function buildXlsx(a,photos){
   wb.calcProperties.fullCalcOnLoad=true;
   return wb.xlsx.writeBuffer();
 }
-const MIME={xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",json:"application/json",zip:"application/zip"};
+const MIME={xlsx:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",docx:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",json:"application/json",zip:"application/zip",pdf:"application/pdf"};
 function shareSheet(filename,data){
   const ext=filename.split(".").pop(); const blob=data instanceof Blob?new Blob([data],{type:MIME[ext]||"application/octet-stream"}):new Blob([data],{type:MIME[ext]||"text/plain"});
   const file=new File([blob],filename,{type:blob.type});
@@ -1548,6 +1548,138 @@ function dosyaNoParts(dn){ let t=String(dn||"").replace(/[.…]+/g," ").trim(); 
   if(parts.length===1) return {no:parts[0],ek:""};
   return {no:parts.slice(0,-1).join("-"),ek:parts[parts.length-1]}; }
 function docxName(a){ const f=FORM_BY[a.code]; return ["F701-056",f.code,safeName(f.name),persInitials(a),isoToTr(repVal(a,"tarih")||a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx"; }
+/* ================= F701-056 → PDF (cihazda: docx-preview + html2canvas + jsPDF) ================= */
+const PDF_LIBS=[["docx","docx-preview.min.js","https://cdn.jsdelivr.net/npm/docx-preview@0.4.1/dist/docx-preview.min.js"],
+  ["html2canvas","html2canvas.min.js","https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"],
+  ["jspdf","jspdf.umd.min.js","https://cdn.jsdelivr.net/npm/jspdf@4.2.1/dist/jspdf.umd.min.js"]];
+async function ensurePdfLibs(){
+  await ensureZip();
+  for(const [g,local,cdn] of PDF_LIBS){ if(g==="html2canvas"||window[g]) continue; if(PWA) await loadScript(local); else await loadScript(cdn); }
+  if(!document.getElementById("pdfWaitCss")){ const st=document.createElement("style"); st.id="pdfWaitCss";
+    st.textContent=`.pdf-frame{position:fixed;left:0;top:0;width:900px;height:1400px;border:0;background:#fff;pointer-events:none;z-index:-1}
+.pdf-wait{position:fixed;inset:0;z-index:9999;background:var(--bg,#f4f4f1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-size:16px;padding:24px;text-align:center}`;
+    document.head.appendChild(st); }
+}
+/* Calibri yerine metrik uyumlu Carlito (SIL OFL) – iPhone/Android'de Calibri yok */
+function pdfFontCss(){ const ff=[], base=PWA?new URL("fonts/",location.href).href:"https://cdn.jsdelivr.net/npm/@fontsource/carlito@5/files/";
+  for(const fam of ["Calibri","Calibri Light","Carlito"]) for(const [w,st] of [["400","normal"],["700","normal"],["400","italic"],["700","italic"]]){
+    ff.push(`@font-face{font-family:"${fam}";font-style:${st};font-weight:${w};src:url(${base}carlito-latin-${w}-${st}.woff2) format("woff2");unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+2000-206F,U+20AC,U+2122,U+2212}`);
+    ff.push(`@font-face{font-family:"${fam}";font-style:${st};font-weight:${w};src:url(${base}carlito-latin-ext-${w}-${st}.woff2) format("woff2");unicode-range:U+0100-0130,U+0132-017F}`); }
+  return ff.join("\n"); }
+async function pdfFontsReady(doc){ try{ await Promise.all(["400 12px Calibri","700 12px Calibri","italic 400 12px Calibri","italic 700 12px Calibri"].map(f=>doc.fonts.load(f,"AaĞğŞşİıÇçÖöÜü"))); await doc.fonts.ready; }catch(e){} }
+/* sayfa numarası alanlarını (PAGE / NUMPAGES) işaretle: her PDF sayfasında doğru yazılır */
+function markPageFields(xml){
+  const mark=(x,word,tok)=>{
+    x=x.replace(new RegExp('(<w:instrText[^>]*>\\s*'+word+'\\b[\\s\\S]*?<w:fldChar w:fldCharType="separate"\\s*/>[\\s\\S]*?<w:t(?:\\s[^>]*)?>)[^<]*(</w:t>)','g'),"$1"+tok+"$2");
+    x=x.replace(new RegExp('(<w:fldSimple[^>]*w:instr="\\s*'+word+'\\b[^"]*"[^>]*>[\\s\\S]*?<w:t(?:\\s[^>]*)?>)[^<]*(</w:t>)','g'),"$1"+tok+"$2");
+    return x; };
+  return mark(mark(xml,"NUMPAGES","§N§"),"PAGE","§P§");
+}
+async function docxToPdf(docBlob){
+  await ensurePdfLibs();
+  const z=await JSZip.loadAsync(docBlob);
+  for(const n of Object.keys(z.files).filter(n=>/^word\/footer\d*\.xml$/.test(n))) z.file(n,markPageFields(await z.file(n).async("string")));
+  const blob2=await z.generateAsync({type:"blob"});
+  const ifr=document.createElement("iframe"); ifr.className="pdf-frame"; ifr.setAttribute("aria-hidden","true"); ifr.setAttribute("tabindex","-1"); document.body.appendChild(ifr);
+  try{
+    const idoc=ifr.contentDocument; idoc.open(); idoc.write(`<!doctype html><html><head><meta charset="utf-8"><style>${pdfFontCss()}
+html,body{margin:0;padding:0;background:#fff}.docx-wrapper{background:#fff!important;padding:0!important;display:block!important}section.docx{box-shadow:none!important;margin:0!important}
+section.docx,section.docx *{font-family:"Calibri","Carlito",Arial,sans-serif!important}</style></head><body><div id="ds"></div><div id="h"></div></body></html>`); idoc.close();
+    const host=idoc.getElementById("h"); const iw=ifr.contentWindow;
+    // html2canvas çerçevenin kendi belgesinde çalışmalı (ana belgeden çağrılınca koordinatlar kayıyor)
+    await new Promise((res,rej)=>{ const sc=idoc.createElement("script"); sc.src=PWA?new URL("html2canvas.min.js",location.href).href:PDF_LIBS[1][2]; sc.onload=res; sc.onerror=rej; idoc.head.appendChild(sc); });
+    await pdfFontsReady(idoc);
+    await docx.renderAsync(blob2,host,idoc.getElementById("ds"),{inWrapper:true,ignoreWidth:false,ignoreHeight:false,renderHeaders:true,renderFooters:true,breakPages:false,ignoreLastRenderedPageBreak:true,experimental:true,useBase64URL:true});
+    await Promise.all([...host.querySelectorAll("img")].map(i=>i.decode?i.decode().catch(()=>{}):null));
+    await pdfFontsReady(idoc);
+    const secs=[...host.querySelectorAll("section.docx")]; if(!secs.length) throw new Error("render");
+    ifr.style.height=Math.ceil(idoc.documentElement.scrollHeight+20)+"px"; await new Promise(r=>iw.requestAnimationFrame(()=>r()));
+    const S2=2, A4W=595.28, A4H=841.89;
+    const pdf=new jspdf.jsPDF({unit:"pt",format:"a4",compress:true});
+    const pages=[]; // {sec, from, to}
+    const geo=secs.map(sec=>{ const cs=getComputedStyle(sec); const r=sec.getBoundingClientRect();
+      const pw=r.width, ph=parseFloat(cs.minHeight)||pw*297/210, pt=parseFloat(cs.paddingTop)||0, pb=parseFloat(cs.paddingBottom)||0;
+      const art=sec.querySelector(":scope > article")||sec; const ar=art.getBoundingClientRect();
+      const top=ar.top-r.top, bottom=ar.bottom-r.top, avail=(ph-pb)-pt;
+      // kesilebilecek yerler: üst düzey paragraf / tablo satırı alt kenarları
+      const cand=new Set([Math.round(bottom)]);
+      [...art.children].forEach(el=>{ const er=el.getBoundingClientRect(); cand.add(Math.round(er.bottom-r.top));
+        if(el.tagName==="TABLE"){ const rows=[...el.querySelectorAll(":scope > tbody > tr, :scope > tr, :scope > thead > tr")]; rows.forEach(tr=>cand.add(Math.round(tr.getBoundingClientRect().bottom-r.top))); } });
+      const cs2=[...cand].sort((a,b)=>a-b);
+      let start=pt; const cuts=[];
+      while(start<bottom-1){ const lim=start+avail; let cut=cs2.filter(y=>y>start+20&&y<=lim).pop(); if(!cut) cut=Math.min(lim,bottom); cuts.push([start,cut]); start=cut; }
+      if(!cuts.length) cuts.push([pt,pt]);
+      cuts.forEach(c=>pages.push({sec,r,pw,ph,pt,pb,from:c[0],to:c[1]}));
+      return {sec,r}; });
+    const total=pages.length;
+    const snap=(sec,y,h)=>{ const r=sec.getBoundingClientRect(); return iw.html2canvas(sec,{scale:S2,backgroundColor:"#ffffff",useCORS:true,logging:false,x:r.left+iw.scrollX,y:r.top+iw.scrollY+y,width:r.width,height:Math.max(1,h)}); };
+    const hdrCache=new Map();
+    for(let i=0;i<total;i++){ const p=pages[i];
+      const cv=document.createElement("canvas"); cv.width=Math.round(p.pw*S2); cv.height=Math.round(p.ph*S2); const g=cv.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,cv.width,cv.height);
+      // üst bilgi (her sayfada)
+      const hdr=p.sec.querySelector(":scope > header");
+      if(hdr){ let hc=hdrCache.get(p.sec); if(!hc){ const hr=hdr.getBoundingClientRect(); const y=Math.max(0,hr.top-p.r.top); hc={y,c:await snap(p.sec,y,Math.min(p.pt,hr.bottom-p.r.top)-y)}; hdrCache.set(p.sec,hc); } g.drawImage(hc.c,0,Math.round(hc.y*S2)); }
+      // gövde dilimi
+      if(p.to>p.from){ const b=await snap(p.sec,p.from,p.to-p.from); g.drawImage(b,0,Math.round(p.pt*S2)); }
+      // alt bilgi: sayfa no
+      const ftr=p.sec.querySelector(":scope > footer");
+      if(ftr){ const tw=document.createTreeWalker(ftr,NodeFilter.SHOW_TEXT); const nodes=[]; while(tw.nextNode()) nodes.push(tw.currentNode);
+        nodes.forEach(n=>{ if(n._orig===undefined) n._orig=n.nodeValue; n.nodeValue=n._orig.replace(/§P§/g,String(i+1)).replace(/§N§/g,String(total)); });
+        const fr=ftr.getBoundingClientRect(); const fh=fr.height; const fy=fr.top-p.r.top;
+        const fc=await snap(p.sec,fy,fh);
+        const footerDist=Math.max(0,(p.r.bottom-p.r.top)-(fr.bottom-p.r.top)); // render edilen bölümdeki alt mesafe
+        g.drawImage(fc,0,Math.round((p.ph-footerDist-fh)*S2)); }
+      if(i) pdf.addPage("a4","p");
+      pdf.addImage(cv.toDataURL("image/jpeg",0.88),"JPEG",0,0,A4W,A4H,undefined,"FAST");
+    }
+    return pdf.output("blob");
+  } finally { ifr.remove(); }
+}
+function pdfName(a){ return docxName(a).replace(/\.docx$/,".pdf"); }
+/* tüm ekipmanların F701-056 raporları PDF: her denetim ayrı .pdf veya tek ZIP */
+async function exportAllPdf(btn){
+  let wait=null; const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
+  const say=t=>{ if(old!==null) lab.textContent=t; };
+  if(btn) btn.disabled=true;
+  try{
+    await flush(); say("PDF araçları yükleniyor…"); await ensurePdfLibs();
+    wait=document.createElement("div"); wait.className="pdf-wait"; wait.setAttribute("role","status"); wait.innerHTML=`<b>F701-056 PDF raporları hazırlanıyor</b><span class="muted num" id="pdfWaitTxt"></span><span class="muted" style="font-size:13px">Lütfen ekranı kapatmayın.</span>`; document.body.appendChild(wait);
+    const list=S.audits.filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
+    const docs=[], fails=[], used={};
+    for(let i=0;i<list.length;i++){ const a=list[i]; say("PDF hazırlanıyor… "+(i+1)+"/"+list.length); const wt=document.getElementById("pdfWaitTxt"); if(wt) wt.textContent=(i+1)+" / "+list.length+" · "+FORM_BY[a.code].code+" "+FORM_BY[a.code].name;
+      try{ const pdf=await docxToPdf(await buildDocx(a)); let name=pdfName(a); used[name]=(used[name]||0)+1; if(used[name]>1) name=name.replace(/\.pdf$/,"_"+used[name]+".pdf");
+        docs.push({a,name,blob:pdf,empty:counts(a).empty,miss:noteMissing(a).length}); }
+      catch(e){ console.error(e); fails.push(a); }
+    }
+    if(wait){ wait.remove(); wait=null; }
+    if(!docs.length){ toast("PDF raporları oluşturulamadı."); return; }
+    say("Paketleniyor…");
+    const zip=new JSZip(); docs.forEach(d=>zip.file(d.name,d.blob));
+    const zipName="F701-056_Tum_Ekipmanlar_PDF_"+fmtDate(Date.now()).replace(/\./g,"")+".zip";
+    const zipBlob=await zip.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
+    const files=docs.map(d=>new File([d.blob],d.name,{type:"application/pdf"}));
+    const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
+    const eksik=docs.filter(d=>d.empty||d.miss).length;
+    const v=document.createElement("div"); v.className="sheet-back";
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 PDF raporları hazır"><b>F701-056 PDF raporları hazır</b>
+      <span class="muted num">${docs.length} ekipman · ${sizeTxt(zipBlob.size)}${fails.length?` · <span style="color:var(--ud)">${fails.length} rapor oluşturulamadı</span>`:""}</span>
+      <div class="muted" style="font-size:13px;max-height:30vh;overflow:auto">${docs.map(d=>`<div class="num" style="overflow-wrap:anywhere">• ${esc(d.name)}${d.empty||d.miss?` <span style="color:var(--ud)">(${[d.empty?d.empty+" boş madde":"",d.miss?d.miss+" notsuz UD/KD":""].filter(Boolean).join(", ")})</span>`:""}</div>`).join("")}${fails.map(a=>`<div style="color:var(--ud)">• ${esc(FORM_BY[a.code].code+" "+FORM_BY[a.code].name)} – oluşturulamadı</div>`).join("")}</div>
+      ${eksik?`<p class="hint" style="margin:0">${eksik} raporda eksik madde var; raporlar yine de oluşturuldu.</p>`:""}
+      <button class="btn primary" data-pp="sep">${ICON.up}${canMulti?"Her ekipman ayrı PDF – paylaş / Dosyalara kaydet":"Her ekipman ayrı PDF dosyası olarak indir"} (${docs.length})</button>
+      <button class="btn" data-pp="one">${ICON.save}Tek ZIP – tüm PDF raporları</button>
+      <button class="btn" data-pp="x">Kapat</button></div>`;
+    document.body.appendChild(v);
+    v.addEventListener("click",async e=>{ const b=e.target.closest("[data-pp]"); if(e.target===v||(b&&b.dataset.pp==="x")){ v.remove(); return; } if(!b) return;
+      if(b.dataset.pp==="one"){ v.remove(); await saveFile(zipName,zipBlob); return; }
+      if(canMulti){ try{ await navigator.share({files,title:"F701-056 PDF raporları"}); v.remove(); }catch(err){ if(err&&err.name==="AbortError") return; toast("Paylaşılamadı; tek ZIP seçeneğini kullanın."); } return; }
+      v.remove();
+      if(!PWA){ for(const d of docs){ await saveFile(d.name,d.blob); } return; }
+      for(const d of docs){ const u=URL.createObjectURL(d.blob); const x=document.createElement("a"); x.href=u; x.download=d.name; document.body.appendChild(x); x.click(); x.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000); await new Promise(r=>setTimeout(r,450)); }
+      toast(docs.length+" PDF raporu indirildi");
+    });
+  }catch(e){ console.error(e); toast("PDF raporları oluşturulamadı."); }
+  finally{ if(wait) wait.remove(); if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
+}
 /* tüm ekipmanların F701-056 Word raporları: her denetim ayrı .docx veya tek ZIP */
 async function exportAllDocx(btn){
   const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
@@ -2024,6 +2156,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="allPhotosBtn"||t.id==="allPhotosBtn2"){ exportAllPhotos(t); return; }
   if(t.id==="auditListBtn"){ exportAuditList(t); return; }
   if(t.id==="allDocxBtn"){ exportAllDocx(t); return; }
+  if(t.id==="allPdfBtn"){ exportAllPdf(t); return; }
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }

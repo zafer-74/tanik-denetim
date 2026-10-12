@@ -10,6 +10,7 @@ ana ekrana eklenir; tam ekran açılır ve internet olmadan da çalışır.
 | sw.js | Çevrimdışı çalışmayı sağlar |
 | manifest.webmanifest | Uygulama adı, simge ve tam ekran ayarı |
 | exceljs.min.js, jszip.min.js | Excel ve Word dosyası üretimi (internet gerekmeden) |
+| docx-preview.min.js, html2canvas.min.js, jspdf.umd.min.js, fonts/ | F701-056 raporlarının PDF'e çevrilmesi (internet gerekmeden) |
 | icon-180/192/512.png | Ana ekran simgeleri |
 
 Dosyaların hepsi aynı klasörde, aynı adlarla yüklenmelidir.
@@ -90,6 +91,10 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
   F701-056 Word raporunu oluşturur. Dosya adı: `F701-056_<ekipman kodu>_<ekipman adı>_<personel baş harfleri>_<tarih>.docx`.
   **Her ekipman ayrı Word dosyası** (telefonda tek paylaşımla Dosyalar'a, bilgisayarda ayrı ayrı indirilir) veya **Tek ZIP**
   seçilebilir. Eksik maddesi olan raporlar listede kırmızıyla belirtilir; raporlar yine de oluşturulur.
+- **Tüm ekipmanların F701-056 raporları (PDF):** Word düğmesinin altındaki düğme aynı raporları cihazda PDF'e çevirir
+  (internet gerekmez). Üst bilgi (Dosya No) her sayfada, sayfa numaraları doğru, tablo satırları sayfa arasında bölünmez.
+  PDF sayfaları yüksek çözünürlüklü görüntüdür (metin seçilemez); düzenlenebilir sürüm için Word düğmesini kullanın.
+  Calibri yerine metrik uyumlu açık lisanslı **Carlito** yazı tipi kullanılır (`fonts/`, SIL OFL).
 - **Tanık denetim listesi (Excel):** Ana ekranda **Tanık denetim listesi – alan/tür bazında (Excel)** düğmesi tüm denetimleri
   muayene alanı (Kaldırma ve İletme / Basınçlı Kaplar / Kazanlar / Asansörler) ve muayene türüne göre gruplar. Sütunlar: tanık denetim
   tarihi, muayene faaliyetinin gerçekleştirildiği kuruluş ve adresi (Kapak → Denetim Yeri), muayene personelleri (enspektör listesi,
