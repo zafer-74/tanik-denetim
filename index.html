@@ -782,7 +782,7 @@ function renderHome(){
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
-    ${aud.length&&S.downloads?`<button class="btn" id="allPhotosBtn" style="margin-top:10px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
+    ${aud.length&&S.downloads?`<button class="btn" id="auditListBtn" style="margin-top:10px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
     <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
     <div id="homeRes">${homeResHTML()}</div>
@@ -1213,6 +1213,85 @@ async function exportAllPhotos(btn){
       toast(packs.length+" ZIP dosyası indirildi");
     });
   }catch(e){ console.error(e); toast("Fotoğraflar paketlenemedi."); }
+  finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
+}
+/* ================= tüm denetimler: muayene alanı / türü bazında tanık denetim listesi (Excel) ================= */
+function alanOf(code){ return code.startsWith("2.")?"Basınçlı Kaplar":code.startsWith("3.")?"Kazanlar":code.startsWith("7.")?"Asansörler":"Kaldırma ve İletme Ekipmanları"; }
+function turOf(a){ const t=String(repVal(a,"alan")||"").split("\n").map(x=>x.trim()).filter(Boolean); const k=t.find(x=>/kontrol|muayene|deney|test/i.test(x)&&!/–/.test(x)); return k||"Periyodik kontrol"; }
+async function exportAuditList(btn){
+  const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
+  if(btn){ btn.disabled=true; if(old!==null) lab.textContent="Excel hazırlanıyor…"; }
+  try{
+    await flush(); await ensureExcel();
+    const ALAN_SIRA=["Kaldırma ve İletme Ekipmanları","Basınçlı Kaplar","Kazanlar","Asansörler"];
+    const cmpCode=(x,y)=>{ const A=x.split(".").map(v=>isNaN(+v)?v:+v), B=y.split(".").map(v=>isNaN(+v)?v:+v); for(let i=0;i<Math.max(A.length,B.length);i++){ if(A[i]===undefined) return -1; if(B[i]===undefined) return 1; if(A[i]!==B[i]) return (typeof A[i]==="number"&&typeof B[i]==="number")?A[i]-B[i]:String(A[i]).localeCompare(String(B[i]),"tr"); } return 0; };
+    const rows=S.audits.filter(a=>FORM_BY[a.code]).map(a=>{ const f=FORM_BY[a.code];
+      const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(" · ");
+      const pers=ensSorted(a).filter(e=>e.ad).map(e=>e.ad+(e.unvan?" ("+e.unvan+")":"")).join("\n")||repVal(a,"personel")||a.cover[14]||"";
+      return { alan:alanOf(f.code), tur:turOf(a), code:f.code, ekipman:f.name, eq,
+        tarihIso:/^\d{4}-\d{2}-\d{2}$/.test(a.cover[9]||"")?a.cover[9]:"", tarih:isoToTr(repVal(a,"tarih")||a.cover[9])||"",
+        yer:a.cover[10]||"", kurulus:a.cover[7]||"", pers, std:repVal(a,"std")||"", denNo:(rep(a).denetimNo||"").trim(),
+        kg:rep(a).kapsamGen?"Evet":"", sonuc:a.sonuc||"", c:counts(a) }; });
+    if(!rows.length){ toast("Kayıtlı denetim yok."); return; }
+    rows.sort((x,y)=>(ALAN_SIRA.indexOf(x.alan)-ALAN_SIRA.indexOf(y.alan))||x.tur.localeCompare(y.tur,"tr")||(x.tarihIso||"9").localeCompare(y.tarihIso||"9")||cmpCode(x.code,y.code));
+    const wb=new ExcelJS.Workbook(); wb.creator="Tanık Denetim Saha Kaydı"; wb.created=new Date();
+    const NAVY="FF1F3864", HEAD="FF2F5496", GRP="FFD9E2F3", ZEB="FFF7F9FC";
+    const thin={style:"thin",color:{argb:"FFA6A6A6"}}; const BRD={top:thin,left:thin,bottom:thin,right:thin};
+    const F=(o)=>Object.assign({name:"Arial",size:9},o||{});
+    const title=(ws,t,sub,n)=>{ ws.mergeCells(1,1,1,n); const c=ws.getCell(1,1); c.value=t; c.font=F({size:13,bold:true,color:{argb:"FFFFFFFF"}}); c.fill={type:"pattern",pattern:"solid",fgColor:{argb:NAVY}}; c.alignment={vertical:"middle"}; ws.getRow(1).height=26;
+      ws.mergeCells(2,1,2,n); const d=ws.getCell(2,1); d.value=sub; d.font=F({italic:true,color:{argb:"FF595959"}}); d.alignment={wrapText:true,vertical:"middle"}; ws.getRow(2).height=28; };
+    const head=(ws,r,hs,ws_)=>{ hs.forEach((h,i)=>{ const c=ws.getCell(r,i+1); c.value=h; c.font=F({bold:true,color:{argb:"FFFFFFFF"}}); c.fill={type:"pattern",pattern:"solid",fgColor:{argb:HEAD}}; c.alignment={wrapText:true,vertical:"middle",horizontal:"center"}; c.border=BRD; ws.getColumn(i+1).width=ws_[i]; }); ws.getRow(r).height=32; };
+    const lines=(v,w)=>String(v||"").split("\n").reduce((n,l)=>n+Math.max(1,Math.ceil(l.length/Math.max(8,w*1.15))),0);
+    const today=fmtDate(Date.now());
+    const sub=`Oluşturma: ${today} · ${rows.length} tanık denetimi · Kaynak: Tanık Denetim Saha Kaydı (Kapak: tarih, denetim yeri, muayene kuruluşu · Rapor: muayene personeli, standartlar)`;
+
+    /* --- Sayfa 1: alan ve tür bazında (birleştirilmiş hücreler) --- */
+    const H1=["Muayene Alanı","Muayene Türü","No","Kapsam Kodu","Ekipman","Tanık Denetim Tarihi","Muayene Faaliyetinin Gerçekleştirildiği Kuruluş ve Adresi","Muayene Personelleri","Standartlar","Muayene Kuruluşu","Denetim No","Kapsam Genişletme","Sonuç"];
+    const W1=[18,14,5,10,24,12,40,28,40,26,13,10,12];
+    const s1=wb.addWorksheet("Alan ve Tür Bazında",{pageSetup:{orientation:"landscape",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"3:3"},views:[{state:"frozen",ySplit:3}]});
+    title(s1,"TANIK DENETİM LİSTESİ – MUAYENE ALANI VE TÜRÜ BAZINDA",sub,H1.length); head(s1,3,H1,W1);
+    let r=4, gi=0;
+    const groups=[]; rows.forEach(x=>{ const g=groups[groups.length-1]; if(g&&g.alan===x.alan&&g.tur===x.tur) g.items.push(x); else groups.push({alan:x.alan,tur:x.tur,items:[x]}); });
+    groups.forEach(g=>{ const r0=r;
+      g.items.forEach((x,i)=>{ const vals=[g.alan,g.tur,i+1,x.code,x.ekipman+(x.eq?"\n"+x.eq:""),x.tarih,x.yer,x.pers,x.std,x.kurulus,x.denNo,x.kg,x.sonuc];
+        vals.forEach((v,j)=>{ const c=s1.getCell(r,j+1); c.value=v===""?null:v; c.font=F(j<2?{bold:true,color:{argb:NAVY}}:{}); c.border=BRD;
+          c.alignment={wrapText:true,vertical:j<2?"middle":"top",horizontal:[2,3,5,10,11,12].includes(j)||j<2?"center":"left"};
+          if(j>=2&&gi%2) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:ZEB}}; if(j<2) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:GRP}}; });
+        s1.getRow(r).height=Math.min(400,Math.max(18,13*Math.max(...[4,6,7,8,9].map(j=>lines(vals[j],W1[j])),g.items.length===1?lines(g.alan,W1[0]):1)+4)); r++; });
+      if(g.items.length>1){ s1.mergeCells(r0,1,r-1,1); s1.mergeCells(r0,2,r-1,2); }
+      gi++; });
+    const L1=r-1;
+    r++; s1.mergeCells(r,1,r,H1.length);
+    s1.getCell(r,1).value="Not: Muayene faaliyetinin gerçekleştirildiği kuruluş ve adresi Kapak sayfasındaki \"Denetim Yeri\", muayene personeli enspektör listesi (ünvanıyla), standartlar F701-056 Rapor sekmesindeki \"Standartlar\" (boşsa Kapak satır 27) alanından alınır. Boş hücreler ilgili alanın doldurulmadığını gösterir.";
+    s1.getCell(r,1).font=F({italic:true,size:8}); s1.getCell(r,1).alignment={wrapText:true}; s1.getRow(r).height=26;
+
+    /* --- Sayfa 2: alan/tür özeti --- */
+    const H2=["Muayene Alanı","Muayene Türü","Tanık Denetim Sayısı","Kapsam Kodları / Ekipmanlar","Tanık Denetim Tarihleri","Muayene Faaliyetinin Gerçekleştirildiği Kuruluş ve Adresleri","Muayene Personelleri","Standartlar"];
+    const W2=[20,14,10,34,14,42,30,42];
+    const s2=wb.addWorksheet("Alan-Tür Özeti",{pageSetup:{orientation:"landscape",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0},views:[{state:"frozen",ySplit:3}]});
+    title(s2,"TANIK DENETİM ÖZETİ – MUAYENE ALANI VE TÜRÜ",sub,H2.length); head(s2,3,H2,W2);
+    const uniq=arr=>{ const seen=new Set(), out=[]; arr.forEach(v=>String(v||"").split("\n").map(x=>x.trim()).filter(Boolean).forEach(x=>{ const k=x.toLocaleLowerCase("tr"); if(!seen.has(k)){ seen.add(k); out.push(x); } })); return out.join("\n"); };
+    r=4;
+    groups.forEach((g,k)=>{ const vals=[g.alan,g.tur,g.items.length,uniq(g.items.map(x=>x.code+" "+x.ekipman)),uniq(g.items.map(x=>x.tarih)),uniq(g.items.map(x=>x.yer)),uniq(g.items.map(x=>x.pers)),uniq(g.items.map(x=>x.std))];
+      vals.forEach((v,j)=>{ const c=s2.getCell(r,j+1); c.value=v===""?null:v; c.font=F(j<2?{bold:true,color:{argb:NAVY}}:{}); c.border=BRD; c.alignment={wrapText:true,vertical:"top",horizontal:j===2?"center":"left"}; if(k%2) c.fill={type:"pattern",pattern:"solid",fgColor:{argb:ZEB}}; });
+      s2.getRow(r).height=Math.min(400,Math.max(18,13*Math.max(...[0,3,4,5,6,7].map(j=>lines(vals[j],W2[j])))+4)); r++; });
+    const tr=r; s2.getCell(tr,1).value="TOPLAM"; s2.getCell(tr,1).font=F({bold:true}); s2.getCell(tr,3).value={formula:`SUM(C4:C${tr-1})`,result:rows.length}; s2.getCell(tr,3).font=F({bold:true}); s2.getCell(tr,3).alignment={horizontal:"center"};
+    for(let j=1;j<=H2.length;j++) s2.getCell(tr,j).border=BRD;
+
+    /* --- Sayfa 3: düz liste (filtrelenebilir) --- */
+    const H3=["Muayene Alanı","Muayene Türü","Kapsam Kodu","Ekipman","Ekipman Bilgisi","Tanık Denetim Tarihi","Muayene Faaliyetinin Gerçekleştirildiği Kuruluş ve Adresi","Muayene Personelleri","Standartlar","Muayene Kuruluşu","Denetim No","Kapsam Genişletme","Sonuç","Değerlendirilen Madde","U","UD","G","KD"];
+    const W3=[18,14,10,22,22,12,38,28,38,24,12,10,11,10,6,6,6,6];
+    const s3=wb.addWorksheet("Tüm Denetimler (Liste)",{pageSetup:{orientation:"landscape",paperSize:9,fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"3:3"},views:[{state:"frozen",ySplit:3,xSplit:4}]});
+    title(s3,"TÜM TANIK DENETİMLERİ – FİLTRELENEBİLİR LİSTE",sub,H3.length); head(s3,3,H3,W3);
+    rows.forEach((x,i)=>{ const rr=4+i; const td=x.tarihIso?new Date(Date.UTC(+x.tarihIso.slice(0,4),+x.tarihIso.slice(5,7)-1,+x.tarihIso.slice(8,10))):(x.tarih||null);
+      const vals=[x.alan,x.tur,x.code,x.ekipman,x.eq,td,x.yer,x.pers,x.std,x.kurulus,x.denNo,x.kg,x.sonuc,`${x.c.total-x.c.empty}/${x.c.total}`,x.c.U,x.c.UD,x.c.G,x.c.KD];
+      vals.forEach((v,j)=>{ const c=s3.getCell(rr,j+1); c.value=v===""?null:v; c.font=F(); c.border=BRD; c.alignment={wrapText:true,vertical:"top",horizontal:[2,5,10,11,12,13,14,15,16,17].includes(j)?"center":"left"}; if(j===5&&td instanceof Date) c.numFmt="dd.mm.yyyy"; });
+      s3.getRow(rr).height=Math.min(400,Math.max(18,13*Math.max(...[3,4,6,7,8].map(j=>lines(vals[j],W3[j])))+4)); });
+    s3.autoFilter={from:{row:3,column:1},to:{row:3+rows.length,column:H3.length}};
+
+    const buf=await wb.xlsx.writeBuffer();
+    await saveFile("Tanik_Denetim_Listesi_Alan_Tur_"+today.replace(/\./g,"")+".xlsx",new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+  }catch(e){ console.error(e); toast("Liste oluşturulamadı."); }
   finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
 async function exportJSON(list){
@@ -1883,6 +1962,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
   if(t.id==="allPhotosBtn"||t.id==="allPhotosBtn2"){ exportAllPhotos(t); return; }
+  if(t.id==="auditListBtn"){ exportAuditList(t); return; }
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
