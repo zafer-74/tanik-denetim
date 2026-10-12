@@ -782,7 +782,7 @@ function renderHome(){
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
     <div class="list">${auditsHTML}</div>
-    ${aud.length&&S.downloads?`<button class="btn" id="auditListBtn" style="margin-top:10px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
+    ${aud.length&&S.downloads?`<button class="btn" id="allDocxBtn" style="margin-top:10px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (Word)</button><button class="btn" id="auditListBtn" style="margin-top:8px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
     <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
     <div id="homeRes">${homeResHTML()}</div>
@@ -1534,10 +1534,54 @@ async function buildDocx(a){
     zip.file("word/header1.xml",ser(h)); }
   return zip.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
 }
+function docxName(a){ const f=FORM_BY[a.code]; return ["F701-056",f.code,safeName(f.name),persInitials(a),isoToTr(repVal(a,"tarih")||a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx"; }
+/* tüm ekipmanların F701-056 Word raporları: her denetim ayrı .docx veya tek ZIP */
+async function exportAllDocx(btn){
+  const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
+  const say=t=>{ if(old!==null) lab.textContent=t; };
+  if(btn) btn.disabled=true;
+  try{
+    await flush(); await ensureZip();
+    const list=S.audits.filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
+    const docs=[], fails=[], used={};
+    for(let i=0;i<list.length;i++){ const a=list[i]; say("Raporlar hazırlanıyor… "+(i+1)+"/"+list.length);
+      try{ const blob=await buildDocx(a); let name=docxName(a); used[name]=(used[name]||0)+1; if(used[name]>1) name=name.replace(/\.docx$/,"_"+used[name]+".docx");
+        const c=counts(a); docs.push({a,name,blob,empty:c.empty,miss:noteMissing(a).length}); }
+      catch(e){ console.error(e); fails.push(a); }
+    }
+    if(!docs.length){ toast("Raporlar oluşturulamadı."); return; }
+    say("Paketleniyor…");
+    const zip=new JSZip(); docs.forEach(d=>zip.file(d.name,d.blob));
+    const zipName="F701-056_Tum_Ekipmanlar_"+fmtDate(Date.now()).replace(/\./g,"")+".zip";
+    const zipBlob=await zip.generateAsync({type:"blob",compression:"DEFLATE",mimeType:"application/zip"});
+    const DOCX="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    const files=docs.map(d=>new File([d.blob],d.name,{type:DOCX}));
+    const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
+    const eksik=docs.filter(d=>d.empty||d.miss).length;
+    const v=document.createElement("div"); v.className="sheet-back";
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 raporları hazır"><b>F701-056 raporları hazır</b>
+      <span class="muted num">${docs.length} ekipman · ${sizeTxt(zipBlob.size)}${fails.length?` · <span style="color:var(--ud)">${fails.length} rapor oluşturulamadı</span>`:""}</span>
+      <div class="muted" style="font-size:13px;max-height:30vh;overflow:auto">${docs.map(d=>`<div class="num" style="overflow-wrap:anywhere">• ${esc(d.name)}${d.empty||d.miss?` <span style="color:var(--ud)">(${[d.empty?d.empty+" boş madde":"",d.miss?d.miss+" notsuz UD/KD":""].filter(Boolean).join(", ")})</span>`:""}</div>`).join("")}${fails.map(a=>`<div style="color:var(--ud)">• ${esc(FORM_BY[a.code].code+" "+FORM_BY[a.code].name)} – oluşturulamadı</div>`).join("")}</div>
+      ${eksik?`<p class="hint" style="margin:0">${eksik} raporda eksik madde var; raporlar yine de oluşturuldu, boş maddeler formda boş kalır.</p>`:""}
+      <button class="btn primary" data-pd="sep">${ICON.up}${canMulti?"Her ekipman ayrı Word – paylaş / Dosyalara kaydet":"Her ekipman ayrı Word dosyası olarak indir"} (${docs.length})</button>
+      <button class="btn" data-pd="one">${ICON.save}Tek ZIP – tüm Word raporları</button>
+      <button class="btn" data-pd="x">Kapat</button></div>`;
+    document.body.appendChild(v);
+    v.addEventListener("click",async e=>{ const b=e.target.closest("[data-pd]"); if(e.target===v||(b&&b.dataset.pd==="x")){ v.remove(); return; } if(!b) return;
+      if(b.dataset.pd==="one"){ v.remove(); await saveFile(zipName,zipBlob); return; }
+      if(canMulti){ try{ await navigator.share({files,title:"F701-056 raporları"}); v.remove(); }catch(err){ if(err&&err.name==="AbortError") return; toast("Paylaşılamadı; tek ZIP seçeneğini kullanın."); } return; }
+      v.remove();
+      if(!PWA){ for(const d of docs){ await saveFile(d.name,d.blob); } return; }
+      for(const d of docs){ const u=URL.createObjectURL(d.blob); const x=document.createElement("a"); x.href=u; x.download=d.name; document.body.appendChild(x); x.click(); x.remove(); setTimeout(()=>URL.revokeObjectURL(u),60000); await new Promise(r=>setTimeout(r,450)); }
+      toast(docs.length+" Word raporu indirildi");
+    });
+  }catch(e){ console.error(e); toast("Raporlar oluşturulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."); }
+  finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
+}
 async function exportDocx(){
   const a=S.cur; await flush(); if(!(await confirmEmpty())) return; const btn=$("#docBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Rapor hazırlanıyor…";}
   try{ const blob=await buildDocx(a); const f=FORM_BY[a.code];
-    const name=["F701-056",f.code,safeName(f.name),persInitials(a),isoToTr(repVal(a,"tarih")||a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx";
+    const name=docxName(a);
     await saveFile(name,blob);
   }catch(e){ console.error(e); toast("Rapor oluşturulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."); }
   if(btn){btn.disabled=false; btn.lastChild.textContent="F701-056 raporunu indir (Word)";}
@@ -1966,6 +2010,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="backupAll"){ exportJSON(S.audits); return; }
   if(t.id==="allPhotosBtn"||t.id==="allPhotosBtn2"){ exportAllPhotos(t); return; }
   if(t.id==="auditListBtn"){ exportAuditList(t); return; }
+  if(t.id==="allDocxBtn"){ exportAllDocx(t); return; }
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }

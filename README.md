@@ -86,6 +86,10 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
   **Tüm ekipmanların fotoğraflarını indir** düğmesi (ayrıca sayfanın altında) fotoğrafı olan her denetim için ayrı paket hazırlar:
   **Her ekipman ayrı ZIP** (telefonda tek paylaşımla tüm ZIP'ler Dosyalar'a kaydedilir, bilgisayarda ayrı ayrı indirilir) veya
   **Tek ZIP – her ekipman ayrı klasörde**. Fotoğrafı olmayan denetimler atlanır.
+- **Tüm ekipmanların F701-056 raporları (Word):** Ana ekranda **Denetimlerim** listesinin altındaki düğme, her denetim için
+  F701-056 Word raporunu oluşturur. Dosya adı: `F701-056_<ekipman kodu>_<ekipman adı>_<personel baş harfleri>_<tarih>.docx`.
+  **Her ekipman ayrı Word dosyası** (telefonda tek paylaşımla Dosyalar'a, bilgisayarda ayrı ayrı indirilir) veya **Tek ZIP**
+  seçilebilir. Eksik maddesi olan raporlar listede kırmızıyla belirtilir; raporlar yine de oluşturulur.
 - **Tanık denetim listesi (Excel):** Ana ekranda **Tanık denetim listesi – alan/tür bazında (Excel)** düğmesi tüm denetimleri
   muayene alanı (Kaldırma ve İletme / Basınçlı Kaplar / Kazanlar / Asansörler) ve muayene türüne göre gruplar. Sütunlar: tanık denetim
   tarihi, muayene faaliyetinin gerçekleştirildiği kuruluş ve adresi (Kapak → Denetim Yeri), muayene personelleri (enspektör listesi,
