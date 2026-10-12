@@ -1537,7 +1537,7 @@ async function buildDocx(a){
 async function exportDocx(){
   const a=S.cur; await flush(); if(!(await confirmEmpty())) return; const btn=$("#docBtn"); if(btn){btn.disabled=true; btn.lastChild.textContent="Rapor hazırlanıyor…";}
   try{ const blob=await buildDocx(a); const f=FORM_BY[a.code];
-    const name=["F701-056",f.code,safeName(a.cover[14]),isoToTr(a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx";
+    const name=["F701-056",f.code,safeName(f.name),persInitials(a),isoToTr(repVal(a,"tarih")||a.cover[9]).replace(/\./g,"")].filter(Boolean).join("_")+".docx";
     await saveFile(name,blob);
   }catch(e){ console.error(e); toast("Rapor oluşturulamadı. İnternet bağlantısını kontrol edip tekrar deneyin."); }
   if(btn){btn.disabled=false; btn.lastChild.textContent="F701-056 raporunu indir (Word)";}
@@ -1810,6 +1810,9 @@ function ensList(a){
 }
 function ensFilled(e){ return !!(e.ad||e.unvan||e.ekipnet||e.yetki); }
 const ensCmp=(x,y)=>{ const A=(x.ad||"").trim(), B=(y.ad||"").trim(); if(!A&&!B) return 0; if(!A) return 1; if(!B) return -1; return A.localeCompare(B,"tr",{sensitivity:"base"}); };
+/* muayene personelinin ad-soyad baş harfleri (birden çok kişi: AV-AK) */
+function persInitials(a){ const names=ensSorted(a).map(e=>e.ad).filter(Boolean); if(!names.length&&a.cover[14]) names.push(a.cover[14]);
+  return names.map(n=>String(n).trim().split(/\s+/).filter(Boolean).map(w=>w.charAt(0).toLocaleUpperCase("tr")).join("")).map(x=>safeName(x)).filter(Boolean).join("-"); }
 function ensSorted(a){ return ensList(a).filter(ensFilled).slice().sort(ensCmp); }
 function ensSort(a){ const L=ensList(a); const before=JSON.stringify(L); L.sort(ensCmp); return JSON.stringify(L)!==before; }
 function ensSync(a){
