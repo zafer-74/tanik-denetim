@@ -142,6 +142,13 @@ html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .org-acts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 10px 10px}
 .org-acts .btn{min-height:40px;padding:6px 4px;font-size:12.5px;flex-direction:column;gap:2px;line-height:1.1}
 .org-acts .btn svg{width:18px;height:18px}
+.org-del{display:flex;align-items:center;justify-content:center;gap:6px;width:calc(100% - 20px);margin:0 10px 10px;min-height:38px;border-radius:10px;border:1px dashed var(--ud);background:transparent;color:var(--ud);font-size:13px;font-weight:600}
+.org-del svg{width:16px;height:16px}
+.org-del:active{background:var(--ud-bg)}
+.del-list{max-height:34vh;overflow:auto;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.del-ok{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.del-ok input{width:22px;height:22px;flex:none;margin:0;accent-color:var(--ud)}
+#odYes:disabled{opacity:.4;cursor:not-allowed}
 .eq-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
 .eq-group>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;min-height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .eq-group>summary::-webkit-details-marker{display:none}
@@ -834,7 +841,7 @@ function orgGroupsHTML(aud,card){
     const dates=g.items.map(a=>a.cover[9]).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")).sort();
     const ud=g.items.reduce((n,a)=>n+counts(a).UD,0);
     const ini=g.k?g.name.split(" ").filter(Boolean).slice(0,2).map(w=>w.charAt(0).toLocaleUpperCase("tr")).join(""):"?";
-    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary>${S.downloads?`<div class="org-acts" role="group" aria-label="${esc((g.name||"Kuruluşu girilmemiş")+" için toplu indirme")}"><button class="btn" data-orgact="docx" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (Word)">${ICON.doc}<span>Word</span></button><button class="btn" data-orgact="pdf" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (PDF)">${ICON.doc}<span>PDF</span></button><button class="btn" data-orgact="ph" data-orgk="${esc(key)}" title="Bu kuruluşun fotoğrafları">${ICON.cam}<span>Fotoğraf</span></button><button class="btn" data-orgact="xls" data-orgk="${esc(key)}" title="Bu kuruluşun tanık denetim listesi (Excel)">${ICON.xls}<span>Liste</span></button><button class="btn" data-orgact="json" data-orgk="${esc(key)}" title="Bu kuruluşun tüm kayıtlarını yedekle (JSON, fotoğraflar dahil)">${ICON.save}<span>Yedek</span></button></div>`:""}<div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
+    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary>${S.downloads?`<div class="org-acts" role="group" aria-label="${esc((g.name||"Kuruluşu girilmemiş")+" için toplu indirme")}"><button class="btn" data-orgact="docx" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (Word)">${ICON.doc}<span>Word</span></button><button class="btn" data-orgact="pdf" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (PDF)">${ICON.doc}<span>PDF</span></button><button class="btn" data-orgact="ph" data-orgk="${esc(key)}" title="Bu kuruluşun fotoğrafları">${ICON.cam}<span>Fotoğraf</span></button><button class="btn" data-orgact="xls" data-orgk="${esc(key)}" title="Bu kuruluşun tanık denetim listesi (Excel)">${ICON.xls}<span>Liste</span></button><button class="btn" data-orgact="json" data-orgk="${esc(key)}" title="Bu kuruluşun tüm kayıtlarını yedekle (JSON, fotoğraflar dahil)">${ICON.save}<span>Yedek</span></button></div>`:""}<button class="org-del" data-orgdel="${esc(key)}">${ICON.trash}Bu kuruluşun tüm denetimlerini sil (${g.items.length})</button><div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
 }
 document.addEventListener("toggle",e=>{ const d=e.target; if(!d||!d.classList||!d.classList.contains("org-group")) return; const op=orgOpenGet(); op[d.dataset.org]=d.open; try{ localStorage.setItem("orgOpen",JSON.stringify(op)); }catch(err){} },true);
 function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
@@ -2197,6 +2204,25 @@ document.addEventListener("click",async e=>{
     const run={docx:exportAllDocx,pdf:exportAllPdf,ph:exportAllPhotos,xls:exportAuditList,json:(b,l,tg)=>flush().then(()=>exportJSON(l,tg))}[d.orgact]; if(!run) return;
     t.disabled=true; const o=lab&&lab.textContent; if(lab) lab.textContent="…"; try{ await run(null,g.items,tag); }finally{ t.disabled=false; if(lab) lab.textContent=o; } return; }
   if(d.phzip){ const a=S.audits.find(x=>x.id===d.phzip); if(a) exportPhotosZip(a,null); return; }
+  if(d.orgdel){ const g=(S._orgs||{})[d.orgdel]; if(!g||!g.items.length) return; const tag=g.name||"Kurulus_girilmemis"; const n=g.items.length;
+    const ph=(await Promise.all(g.items.map(a=>Store.photos(a.id).then(x=>x.length).catch(()=>0)))).reduce((x,y)=>x+y,0);
+    const v=document.createElement("div"); v.className="sheet-back";
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Kuruluşun denetimlerini sil"><b>${n} denetim silinsin mi?</b>
+      <span class="fname">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span>
+      <div class="del-list">${g.items.map(a=>{ const f=FORM_BY[a.code]; return `<div class="num">• <b style="font-size:13px;font-family:inherit">${esc(f.code)}</b> ${esc(f.name)}<span class="muted"> · ${esc([a.cover[14],isoToTr(a.cover[9])||fmtDate(a.createdAt)].filter(Boolean).join(" · "))}</span></div>`; }).join("")}</div>
+      <p class="muted" style="margin:0">${n} denetim${ph?" ve "+ph+" fotoğraf":""} bu cihazdan <span style="font-weight:700;color:var(--ud)">kalıcı olarak silinir</span>; geri alınamaz. Silmeden önce yedek almanız önerilir.</p>
+      ${S.downloads?`<button class="btn" data-od="bk">${ICON.save}Önce yedekle (JSON)</button>`:""}
+      <label class="del-ok"><input type="checkbox" id="odOk"><span>Bu işlemin geri alınamayacağını anlıyorum.</span></label>
+      <button class="btn" data-od="yes" id="odYes" disabled style="color:var(--ud);border-color:var(--ud)">${ICON.trash}<span>Evet, ${n} denetimi sil</span></button>
+      <button class="btn primary" data-od="x">Vazgeç</button></div>`;
+    document.body.appendChild(v);
+    const ok=v.querySelector("#odOk"), yes=v.querySelector("#odYes"); ok.addEventListener("change",()=>{ yes.disabled=!ok.checked; });
+    v.addEventListener("click",async e=>{ const b=e.target.closest("[data-od]"); if(e.target===v||(b&&b.dataset.od==="x")){ v.remove(); return; } if(!b) return;
+      if(b.dataset.od==="bk"){ b.disabled=true; try{ await exportJSON(g.items,tag); }finally{ b.disabled=false; } return; }
+      if(b.dataset.od==="yes"&&ok.checked){ yes.disabled=true; ok.disabled=true; const lab=yes.querySelector("span"); let k=0, fail=0;
+        for(const a of g.items){ k++; if(lab) lab.textContent="Siliniyor… "+k+"/"+n; try{ await Store.remove(a); }catch(err){ console.error(err); fail++; } }
+        v.remove(); S.audits=await Store.list(); renderHome(); toast(fail?(n-fail)+" denetim silindi, "+fail+" silinemedi":n+" denetim silindi"); } });
+    return; }
   if(d.delaudit){ const a=S.audits.find(x=>x.id===d.delaudit); if(!a) return; const f=FORM_BY[a.code]; const c=counts(a);
     const v=document.createElement("div"); v.className="sheet-back";
     v.innerHTML=`<div class="sheet" role="dialog" aria-label="Denetimi sil"><b>Denetim silinsin mi?</b><p class="muted" style="margin:0"><span style="font-weight:700;color:var(--ink)">${esc(f.code+" "+f.name)}</span><br>${esc([a.cover[14],a.cover[10]].filter(Boolean).join(" · ")||"Enspektör ve yer girilmemiş")}<br>${esc(isoToTr(a.cover[9])||fmtDate(a.createdAt))} · ${c.total-c.empty}/${c.total} madde değerlendirilmiş</p><p class="muted" style="margin:0">Denetim ve fotoğrafları bu cihazdan <span style="font-weight:700;color:var(--ud)">kalıcı olarak silinir</span>; geri alınamaz.</p><button class="btn" data-dz="yes" style="color:var(--ud);border-color:var(--ud)">${ICON.trash}Evet, sil</button><button class="btn primary" data-dz="x">Vazgeç</button></div>`;
