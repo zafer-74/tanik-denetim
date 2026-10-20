@@ -139,7 +139,7 @@ html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .org-group[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
 .org-group.none>summary .nm{color:var(--muted);font-style:italic}
 .org-group>.list{padding:0 10px 10px}
-.org-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 10px 10px}
+.org-acts{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:0 10px 10px}
 .org-acts .btn{min-height:40px;padding:6px 4px;font-size:12.5px;flex-direction:column;gap:2px;line-height:1.1}
 .org-acts .btn svg{width:18px;height:18px}
 .eq-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
@@ -834,7 +834,7 @@ function orgGroupsHTML(aud,card){
     const dates=g.items.map(a=>a.cover[9]).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")).sort();
     const ud=g.items.reduce((n,a)=>n+counts(a).UD,0);
     const ini=g.k?g.name.split(" ").filter(Boolean).slice(0,2).map(w=>w.charAt(0).toLocaleUpperCase("tr")).join(""):"?";
-    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary>${S.downloads?`<div class="org-acts" role="group" aria-label="${esc((g.name||"Kuruluşu girilmemiş")+" için toplu indirme")}"><button class="btn" data-orgact="docx" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (Word)">${ICON.doc}<span>Word</span></button><button class="btn" data-orgact="pdf" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (PDF)">${ICON.doc}<span>PDF</span></button><button class="btn" data-orgact="ph" data-orgk="${esc(key)}" title="Bu kuruluşun fotoğrafları">${ICON.cam}<span>Fotoğraf</span></button><button class="btn" data-orgact="xls" data-orgk="${esc(key)}" title="Bu kuruluşun tanık denetim listesi (Excel)">${ICON.xls}<span>Liste</span></button></div>`:""}<div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
+    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary>${S.downloads?`<div class="org-acts" role="group" aria-label="${esc((g.name||"Kuruluşu girilmemiş")+" için toplu indirme")}"><button class="btn" data-orgact="docx" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (Word)">${ICON.doc}<span>Word</span></button><button class="btn" data-orgact="pdf" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (PDF)">${ICON.doc}<span>PDF</span></button><button class="btn" data-orgact="ph" data-orgk="${esc(key)}" title="Bu kuruluşun fotoğrafları">${ICON.cam}<span>Fotoğraf</span></button><button class="btn" data-orgact="xls" data-orgk="${esc(key)}" title="Bu kuruluşun tanık denetim listesi (Excel)">${ICON.xls}<span>Liste</span></button><button class="btn" data-orgact="json" data-orgk="${esc(key)}" title="Bu kuruluşun tüm kayıtlarını yedekle (JSON, fotoğraflar dahil)">${ICON.save}<span>Yedek</span></button></div>`:""}<div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
 }
 document.addEventListener("toggle",e=>{ const d=e.target; if(!d||!d.classList||!d.classList.contains("org-group")) return; const op=orgOpenGet(); op[d.dataset.org]=d.open; try{ localStorage.setItem("orgOpen",JSON.stringify(op)); }catch(err){} },true);
 function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
@@ -1327,10 +1327,10 @@ async function exportAuditList(btn,src,tag){
   }catch(e){ console.error(e); toast("Liste oluşturulamadı."); }
   finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
-async function exportJSON(list){
+async function exportJSON(list,tag){
   const out={app:"tanik-saha",version:1,exportedAt:new Date().toISOString(),audits:[]};
   for(const a of list){ out.audits.push({audit:a,photos:await Store.photos(a.id)}); }
-  const name=list.length===1?FORM_BY[list[0].code].code+"_"+safeName(list[0].cover[14]||"denetim")+"_yedek.json":"Tanik_Denetim_Yedek_"+fmtDate(Date.now()).replace(/\./g,"")+".json";
+  const name=tag?"Tanik_Denetim_Yedek_"+safeName(tag)+"_"+fmtDate(Date.now()).replace(/\./g,"")+".json":list.length===1?FORM_BY[list[0].code].code+"_"+safeName(list[0].cover[14]||"denetim")+"_yedek.json":"Tanik_Denetim_Yedek_"+(tag?safeName(tag)+"_":"")+fmtDate(Date.now()).replace(/\./g,"")+".json";
   await saveFile(name,JSON.stringify(out));
 }
 async function importJSON(file){
@@ -2194,7 +2194,7 @@ document.addEventListener("click",async e=>{
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
   if(d.orgact){ const g=(S._orgs||{})[d.orgk]; if(!g) return; const tag=g.name||"Kurulus_girilmemis"; const lab=t.querySelector("span");
-    const run={docx:exportAllDocx,pdf:exportAllPdf,ph:exportAllPhotos,xls:exportAuditList}[d.orgact]; if(!run) return;
+    const run={docx:exportAllDocx,pdf:exportAllPdf,ph:exportAllPhotos,xls:exportAuditList,json:(b,l,tg)=>flush().then(()=>exportJSON(l,tg))}[d.orgact]; if(!run) return;
     t.disabled=true; const o=lab&&lab.textContent; if(lab) lab.textContent="…"; try{ await run(null,g.items,tag); }finally{ t.disabled=false; if(lab) lab.textContent=o; } return; }
   if(d.phzip){ const a=S.audits.find(x=>x.id===d.phzip); if(a) exportPhotosZip(a,null); return; }
   if(d.delaudit){ const a=S.audits.find(x=>x.id===d.delaudit); if(!a) return; const f=FORM_BY[a.code]; const c=counts(a);
