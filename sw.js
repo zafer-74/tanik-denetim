@@ -1,5 +1,5 @@
 /* Tanık Denetim – çevrimdışı çalışma. Yeni sürüm yüklerken SURUM değerini artırın. */
-const SURUM = "tanik-v38";
+const SURUM = "tanik-v39";
 const CEKIRDEK = ["./", "./index.html", "./manifest.webmanifest", "./exceljs.min.js", "./jszip.min.js", "./docx-preview.min.js", "./html2canvas.min.js", "./jspdf.umd.min.js", "./fonts/carlito-latin-400-normal.woff2", "./fonts/carlito-latin-700-normal.woff2", "./fonts/carlito-latin-400-italic.woff2", "./fonts/carlito-latin-700-italic.woff2", "./fonts/carlito-latin-ext-400-normal.woff2", "./fonts/carlito-latin-ext-700-normal.woff2", "./fonts/carlito-latin-ext-400-italic.woff2", "./fonts/carlito-latin-ext-700-italic.woff2", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {

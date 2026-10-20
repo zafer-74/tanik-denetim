@@ -139,6 +139,9 @@ html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .org-group[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
 .org-group.none>summary .nm{color:var(--muted);font-style:italic}
 .org-group>.list{padding:0 10px 10px}
+.org-acts{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:0 10px 10px}
+.org-acts .btn{min-height:40px;padding:6px 4px;font-size:12.5px;flex-direction:column;gap:2px;line-height:1.1}
+.org-acts .btn svg{width:18px;height:18px}
 .eq-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
 .eq-group>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;min-height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .eq-group>summary::-webkit-details-marker{display:none}
@@ -826,12 +829,12 @@ function orgGroupsHTML(aud,card){
     if(!map.has(k)) map.set(k,{k,name:nm,items:[],sp:{}}); const g=map.get(k); g.items.push(a); if(nm) g.sp[nm]=(g.sp[nm]||0)+1; });
   map.forEach(g=>{ const best=Object.entries(g.sp).sort((x,y)=>y[1]-x[1])[0]; if(best) g.name=best[0]; }); // en sık yazım
   const gs=[...map.values()].sort((x,y)=>(!x.k)-(!y.k)||x.name.localeCompare(y.name,"tr"));
-  const op=orgOpenGet(); const single=gs.length===1;
+  const op=orgOpenGet(); const single=gs.length===1; S._orgs={}; gs.forEach(g=>S._orgs[g.k||"__yok"]=g);
   return gs.map(g=>{ const key=g.k||"__yok"; const open=single||op[key]!==false;
     const dates=g.items.map(a=>a.cover[9]).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")).sort();
     const ud=g.items.reduce((n,a)=>n+counts(a).UD,0);
     const ini=g.k?g.name.split(" ").filter(Boolean).slice(0,2).map(w=>w.charAt(0).toLocaleUpperCase("tr")).join(""):"?";
-    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary><div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
+    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary>${S.downloads?`<div class="org-acts" role="group" aria-label="${esc((g.name||"Kuruluşu girilmemiş")+" için toplu indirme")}"><button class="btn" data-orgact="docx" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (Word)">${ICON.doc}<span>Word</span></button><button class="btn" data-orgact="pdf" data-orgk="${esc(key)}" title="Bu kuruluşun F701-056 raporları (PDF)">${ICON.doc}<span>PDF</span></button><button class="btn" data-orgact="ph" data-orgk="${esc(key)}" title="Bu kuruluşun fotoğrafları">${ICON.cam}<span>Fotoğraf</span></button><button class="btn" data-orgact="xls" data-orgk="${esc(key)}" title="Bu kuruluşun tanık denetim listesi (Excel)">${ICON.xls}<span>Liste</span></button></div>`:""}<div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
 }
 document.addEventListener("toggle",e=>{ const d=e.target; if(!d||!d.classList||!d.classList.contains("org-group")) return; const op=orgOpenGet(); op[d.dataset.org]=d.open; try{ localStorage.setItem("orgOpen",JSON.stringify(op)); }catch(err){} },true);
 function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
@@ -1205,13 +1208,13 @@ async function exportPhotosZip(a,btn){
   finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
 /* tüm ekipmanlar: her denetim için ayrı ZIP + (isteğe bağlı) hepsi tek ZIP'te ayrı klasörler */
-async function exportAllPhotos(btn){
+async function exportAllPhotos(btn,src,tag){
   const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
   const say=t=>{ if(old!==null) lab.textContent=t; };
   if(btn) btn.disabled=true;
   try{
     await flush(); await ensureZip();
-    const list=S.audits.filter(a=>FORM_BY[a.code]); const packs=[]; const used={}; let total=0;
+    const list=(src||S.audits).filter(a=>FORM_BY[a.code]); const packs=[]; const used={}; let total=0;
     const all=new JSZip(); const date=fmtDate(Date.now()).replace(/\./g,"");
     for(let i=0;i<list.length;i++){ const a=list[i]; say("Hazırlanıyor… "+(i+1)+"/"+list.length);
       let base=photoBase(a); used[base]=(used[base]||0)+1; if(used[base]>1) base+="_"+used[base];
@@ -1219,15 +1222,15 @@ async function exportAllPhotos(btn){
       const blob=await z.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
       packs.push({a,name:base+"_Fotograflar.zip",blob,n:r.n}); total+=r.n;
     }
-    if(!packs.length){ toast("Hiçbir denetimde fotoğraf yok."); return; }
+    if(!packs.length){ toast(tag?"Bu kuruluşun denetimlerinde fotoğraf yok.":"Hiçbir denetimde fotoğraf yok."); return; }
     say("Paketleniyor…");
-    const allName="Tum_Ekipmanlar_Fotograflar_"+date+".zip";
+    const allName=(tag?safeName(tag)+"_":"Tum_Ekipmanlar_")+"Fotograflar_"+date+".zip";
     const allBlob=await all.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
     const sum=packs.reduce((x,p)=>x+p.blob.size,0);
     const files=packs.map(p=>new File([p.blob],p.name,{type:"application/zip"}));
     const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
     const v=document.createElement("div"); v.className="sheet-back";
-    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Tüm fotoğraflar hazır"><b>Tüm fotoğraflar hazır</b>
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="Tüm fotoğraflar hazır"><b>Tüm fotoğraflar hazır</b>${tag?`<span class="fname">${esc(tag)}</span>`:""}
       <span class="muted num">${packs.length} ekipman · ${total} fotoğraf · ${sizeTxt(sum)}</span>
       <div class="muted" style="font-size:13.5px;max-height:30vh;overflow:auto">${packs.map(p=>`<div class="num">• ${esc(FORM_BY[p.a.code].code+" "+FORM_BY[p.a.code].name)}${p.a.cover[14]?" – "+esc(p.a.cover[14]):""} <span style="opacity:.7">(${p.n})</span></div>`).join("")}</div>
       ${S.downloads?`<button class="btn primary" data-pa="sep">${ICON.up}${canMulti?"Her ekipman ayrı ZIP – paylaş / Dosyalara kaydet":"Her ekipman ayrı ZIP olarak indir"} (${packs.length})</button>
@@ -1248,14 +1251,14 @@ async function exportAllPhotos(btn){
 /* ================= tüm denetimler: muayene alanı / türü bazında tanık denetim listesi (Excel) ================= */
 function alanOf(code){ return code.startsWith("2.")?"Basınçlı Kaplar":code.startsWith("3.")?"Kazanlar":code.startsWith("7.")?"Asansörler":"Kaldırma ve İletme Ekipmanları"; }
 function turOf(a){ const t=String(repVal(a,"alan")||"").split("\n").map(x=>x.trim()).filter(Boolean); const k=t.find(x=>/kontrol|muayene|deney|test/i.test(x)&&!/–/.test(x)); return k||"Periyodik kontrol"; }
-async function exportAuditList(btn){
+async function exportAuditList(btn,src,tag){
   const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
   if(btn){ btn.disabled=true; if(old!==null) lab.textContent="Excel hazırlanıyor…"; }
   try{
     await flush(); await ensureExcel();
     const ALAN_SIRA=["Kaldırma ve İletme Ekipmanları","Basınçlı Kaplar","Kazanlar","Asansörler"];
     const cmpCode=(x,y)=>{ const A=x.split(".").map(v=>isNaN(+v)?v:+v), B=y.split(".").map(v=>isNaN(+v)?v:+v); for(let i=0;i<Math.max(A.length,B.length);i++){ if(A[i]===undefined) return -1; if(B[i]===undefined) return 1; if(A[i]!==B[i]) return (typeof A[i]==="number"&&typeof B[i]==="number")?A[i]-B[i]:String(A[i]).localeCompare(String(B[i]),"tr"); } return 0; };
-    const rows=S.audits.filter(a=>FORM_BY[a.code]).map(a=>{ const f=FORM_BY[a.code];
+    const rows=(src||S.audits).filter(a=>FORM_BY[a.code]).map(a=>{ const f=FORM_BY[a.code];
       const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(" · ");
       const pers=ensSorted(a).filter(e=>e.ad).map(e=>e.ad+(e.unvan?" ("+e.unvan+")":"")).join("\n")||repVal(a,"personel")||a.cover[14]||"";
       return { alan:alanOf(f.code), tur:turOf(a), code:f.code, ekipman:f.name, eq,
@@ -1273,7 +1276,7 @@ async function exportAuditList(btn){
     const head=(ws,r,hs,ws_)=>{ hs.forEach((h,i)=>{ const c=ws.getCell(r,i+1); c.value=h; c.font=F({bold:true,color:{argb:"FFFFFFFF"}}); c.fill={type:"pattern",pattern:"solid",fgColor:{argb:HEAD}}; c.alignment={wrapText:true,vertical:"middle",horizontal:"center"}; c.border=BRD; ws.getColumn(i+1).width=ws_[i]; }); ws.getRow(r).height=32; };
     const lines=(v,w)=>String(v||"").split("\n").reduce((n,l)=>n+Math.max(1,Math.ceil(l.length/Math.max(8,w*1.15))),0);
     const today=fmtDate(Date.now());
-    const sub=`Oluşturma: ${today} · ${rows.length} tanık denetimi · Kaynak: Tanık Denetim Saha Kaydı (Kapak: tarih, denetim yeri, muayene kuruluşu · Rapor: muayene personeli, standartlar)`;
+    const sub=(tag?"Muayene kuruluşu: "+tag+" · ":"")+`Oluşturma: ${today} · ${rows.length} tanık denetimi · Kaynak: Tanık Denetim Saha Kaydı (Kapak: tarih, denetim yeri, muayene kuruluşu · Rapor: muayene personeli, standartlar)`;
 
     /* --- Sayfa 1: alan ve tür bazında (birleştirilmiş hücreler) --- */
     const H1=["Muayene Alanı","Muayene Türü","No","Kapsam Kodu","Ekipman","Tanık Denetim Tarihi","Muayene Faaliyetinin Gerçekleştirildiği Kuruluş ve Adresi","Muayene Personelleri","Standartlar","Muayene Kuruluşu","Denetim No","Kapsam Genişletme","Sonuç"];
@@ -1320,7 +1323,7 @@ async function exportAuditList(btn){
     s3.autoFilter={from:{row:3,column:1},to:{row:3+rows.length,column:H3.length}};
 
     const buf=await wb.xlsx.writeBuffer();
-    await saveFile("Tanik_Denetim_Listesi_Alan_Tur_"+today.replace(/\./g,"")+".xlsx",new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
+    await saveFile("Tanik_Denetim_Listesi_"+(tag?safeName(tag)+"_":"Alan_Tur_")+today.replace(/\./g,"")+".xlsx",new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));
   }catch(e){ console.error(e); toast("Liste oluşturulamadı."); }
   finally{ if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
@@ -1667,14 +1670,14 @@ section.docx,section.docx *{font-family:"Calibri","Carlito",Arial,sans-serif!imp
 }
 function pdfName(a){ return docxName(a).replace(/\.docx$/,".pdf"); }
 /* tüm ekipmanların F701-056 raporları PDF: her denetim ayrı .pdf veya tek ZIP */
-async function exportAllPdf(btn){
+async function exportAllPdf(btn,src,tag){
   let wait=null; const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
   const say=t=>{ if(old!==null) lab.textContent=t; };
   if(btn) btn.disabled=true;
   try{
     await flush(); say("PDF araçları yükleniyor…"); await ensurePdfLibs();
-    wait=document.createElement("div"); wait.className="pdf-wait"; wait.setAttribute("role","status"); wait.innerHTML=`<b>F701-056 PDF raporları hazırlanıyor</b><span class="muted num" id="pdfWaitTxt"></span><span class="muted" style="font-size:13px">Lütfen ekranı kapatmayın.</span>`; document.body.appendChild(wait);
-    const list=S.audits.filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
+    wait=document.createElement("div"); wait.className="pdf-wait"; wait.setAttribute("role","status"); wait.innerHTML=`<b>F701-056 PDF raporları hazırlanıyor</b>${tag?`<span class="fname">${esc(tag)}</span>`:""}<span class="muted num" id="pdfWaitTxt"></span><span class="muted" style="font-size:13px">Lütfen ekranı kapatmayın.</span>`; document.body.appendChild(wait);
+    const list=(src||S.audits).filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
     const docs=[], fails=[], used={};
     for(let i=0;i<list.length;i++){ const a=list[i]; say("PDF hazırlanıyor… "+(i+1)+"/"+list.length); const wt=document.getElementById("pdfWaitTxt"); if(wt) wt.textContent=(i+1)+" / "+list.length+" · "+FORM_BY[a.code].code+" "+FORM_BY[a.code].name;
       try{ const pdf=await docxToPdf(await buildDocx(a)); let name=pdfName(a); used[name]=(used[name]||0)+1; if(used[name]>1) name=name.replace(/\.pdf$/,"_"+used[name]+".pdf");
@@ -1685,13 +1688,13 @@ async function exportAllPdf(btn){
     if(!docs.length){ toast("PDF raporları oluşturulamadı."); return; }
     say("Paketleniyor…");
     const zip=new JSZip(); docs.forEach(d=>zip.file(d.name,d.blob));
-    const zipName="F701-056_Tum_Ekipmanlar_PDF_"+fmtDate(Date.now()).replace(/\./g,"")+".zip";
+    const zipName="F701-056_"+(tag?safeName(tag)+"_":"Tum_Ekipmanlar_")+"PDF_"+fmtDate(Date.now()).replace(/\./g,"")+".zip";
     const zipBlob=await zip.generateAsync({type:"blob",compression:"STORE",mimeType:"application/zip"});
     const files=docs.map(d=>new File([d.blob],d.name,{type:"application/pdf"}));
     const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
     const eksik=docs.filter(d=>d.empty||d.miss).length;
     const v=document.createElement("div"); v.className="sheet-back";
-    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 PDF raporları hazır"><b>F701-056 PDF raporları hazır</b>
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 PDF raporları hazır"><b>F701-056 PDF raporları hazır</b>${tag?`<span class="fname">${esc(tag)}</span>`:""}
       <span class="muted num">${docs.length} ekipman · ${sizeTxt(zipBlob.size)}${fails.length?` · <span style="color:var(--ud)">${fails.length} rapor oluşturulamadı</span>`:""}</span>
       <div class="muted" style="font-size:13px;max-height:30vh;overflow:auto">${docs.map(d=>`<div class="num" style="overflow-wrap:anywhere">• ${esc(d.name)}${d.empty||d.miss?` <span style="color:var(--ud)">(${[d.empty?d.empty+" boş madde":"",d.miss?d.miss+" notsuz UD/KD":""].filter(Boolean).join(", ")})</span>`:""}</div>`).join("")}${fails.map(a=>`<div style="color:var(--ud)">• ${esc(FORM_BY[a.code].code+" "+FORM_BY[a.code].name)} – oluşturulamadı</div>`).join("")}</div>
       ${eksik?`<p class="hint" style="margin:0">${eksik} raporda eksik madde var; raporlar yine de oluşturuldu.</p>`:""}
@@ -1711,13 +1714,13 @@ async function exportAllPdf(btn){
   finally{ if(wait) wait.remove(); if(btn){ btn.disabled=false; if(old!==null) lab.textContent=old; } }
 }
 /* tüm ekipmanların F701-056 Word raporları: her denetim ayrı .docx veya tek ZIP */
-async function exportAllDocx(btn){
+async function exportAllDocx(btn,src,tag){
   const lab=btn?btn.lastChild:null, old=lab&&lab.nodeType===3?lab.textContent:null;
   const say=t=>{ if(old!==null) lab.textContent=t; };
   if(btn) btn.disabled=true;
   try{
     await flush(); await ensureZip();
-    const list=S.audits.filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
+    const list=(src||S.audits).filter(a=>FORM_BY[a.code]); if(!list.length){ toast("Kayıtlı denetim yok."); return; }
     const docs=[], fails=[], used={};
     for(let i=0;i<list.length;i++){ const a=list[i]; say("Raporlar hazırlanıyor… "+(i+1)+"/"+list.length);
       try{ const blob=await buildDocx(a); let name=docxName(a); used[name]=(used[name]||0)+1; if(used[name]>1) name=name.replace(/\.docx$/,"_"+used[name]+".docx");
@@ -1727,14 +1730,14 @@ async function exportAllDocx(btn){
     if(!docs.length){ toast("Raporlar oluşturulamadı."); return; }
     say("Paketleniyor…");
     const zip=new JSZip(); docs.forEach(d=>zip.file(d.name,d.blob));
-    const zipName="F701-056_Tum_Ekipmanlar_"+fmtDate(Date.now()).replace(/\./g,"")+".zip";
+    const zipName="F701-056_"+(tag?safeName(tag)+"_":"Tum_Ekipmanlar_")+fmtDate(Date.now()).replace(/\./g,"")+".zip";
     const zipBlob=await zip.generateAsync({type:"blob",compression:"DEFLATE",mimeType:"application/zip"});
     const DOCX="application/vnd.openxmlformats-officedocument.wordprocessingml.document";
     const files=docs.map(d=>new File([d.blob],d.name,{type:DOCX}));
     const canMulti=PWA&&IS_MOBILE&&navigator.canShare&&(()=>{ try{ return navigator.canShare({files}); }catch(e){ return false; } })();
     const eksik=docs.filter(d=>d.empty||d.miss).length;
     const v=document.createElement("div"); v.className="sheet-back";
-    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 raporları hazır"><b>F701-056 raporları hazır</b>
+    v.innerHTML=`<div class="sheet" role="dialog" aria-label="F701-056 raporları hazır"><b>F701-056 raporları hazır</b>${tag?`<span class="fname">${esc(tag)}</span>`:""}
       <span class="muted num">${docs.length} ekipman · ${sizeTxt(zipBlob.size)}${fails.length?` · <span style="color:var(--ud)">${fails.length} rapor oluşturulamadı</span>`:""}</span>
       <div class="muted" style="font-size:13px;max-height:30vh;overflow:auto">${docs.map(d=>`<div class="num" style="overflow-wrap:anywhere">• ${esc(d.name)}${d.empty||d.miss?` <span style="color:var(--ud)">(${[d.empty?d.empty+" boş madde":"",d.miss?d.miss+" notsuz UD/KD":""].filter(Boolean).join(", ")})</span>`:""}</div>`).join("")}${fails.map(a=>`<div style="color:var(--ud)">• ${esc(FORM_BY[a.code].code+" "+FORM_BY[a.code].name)} – oluşturulamadı</div>`).join("")}</div>
       ${eksik?`<p class="hint" style="margin:0">${eksik} raporda eksik madde var; raporlar yine de oluşturuldu, boş maddeler formda boş kalır.</p>`:""}
@@ -2190,6 +2193,9 @@ document.addEventListener("click",async e=>{
   if(t.id==="lockBtn"||t.id==="exitBtn"){ lockNow(true); return; }
   if(t.id==="pwBtn"){ lockChangePw(); return; }
   if(t.id==="importBtn"){ const i=$("#importInput"); i.value=""; i.click(); return; }
+  if(d.orgact){ const g=(S._orgs||{})[d.orgk]; if(!g) return; const tag=g.name||"Kurulus_girilmemis"; const lab=t.querySelector("span");
+    const run={docx:exportAllDocx,pdf:exportAllPdf,ph:exportAllPhotos,xls:exportAuditList}[d.orgact]; if(!run) return;
+    t.disabled=true; const o=lab&&lab.textContent; if(lab) lab.textContent="…"; try{ await run(null,g.items,tag); }finally{ t.disabled=false; if(lab) lab.textContent=o; } return; }
   if(d.phzip){ const a=S.audits.find(x=>x.id===d.phzip); if(a) exportPhotosZip(a,null); return; }
   if(d.delaudit){ const a=S.audits.find(x=>x.id===d.delaudit); if(!a) return; const f=FORM_BY[a.code]; const c=counts(a);
     const v=document.createElement("div"); v.className="sheet-back";
