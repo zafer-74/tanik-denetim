@@ -72,6 +72,9 @@ Kayıtlar her cihazın kendi içinde saklanır; aktarım JSON yedeğiyle yapıl�
   o kayıt atlanır ve uygulama bunu bildirir. Bu sayede eski bir yedek yeni düzeltmelerin üzerine yazılmaz.
 
 ## 3. Kullanım notları
+- **Denetimlerim, muayene kuruluşuna göre gruplanır.** Grup adı Kapak sayfasındaki **Muayene Kuruluşu** alanından gelir;
+  büyük/küçük harf, boşluk ve "A.Ş. / AŞ / Ltd. Şti." gibi ek farkları aynı kuruluş sayılır. Grup başlığında denetim sayısı,
+  tarih aralığı ve UD sayısı görünür; grupların açık/kapalı durumu hatırlanır. Kuruluşu girilmemiş denetimler en sonda ayrı grupta toplanır.
 - **Kayıtlar telefonda saklanır.** Başka cihaza aktarmak veya güvenceye almak için ana ekrandaki
   **Tüm kayıtları yedekle (JSON)** düğmesini kullanın ve dosyayı OneDrive'a / Dosyalar'a kaydedin.
   Geri yüklemek için **Yedekten geri yükle**.

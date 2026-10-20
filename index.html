@@ -127,6 +127,18 @@ html.embed .home-tools #lockBtn,html.embed .home-tools #pwBtn{display:none}
 .eq .cnt{font-size:12.5px;color:var(--muted);font-weight:400}
 .eq .plus{margin-left:auto;color:var(--muted);flex:none}
 .eq-groups{display:flex;flex-direction:column;gap:10px}
+.org-groups{display:flex;flex-direction:column;gap:10px}
+.org-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.org-group>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:58px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.org-group>summary::-webkit-details-marker{display:none}
+.org-group>summary .org-ic{flex:none;width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--steel);font-family:var(--f-display);font-weight:700;font-size:15px}
+.org-group>summary .nm{font-family:var(--f-display);font-weight:700;font-size:17px;line-height:1.2;overflow-wrap:anywhere}
+.org-group>summary .cnt{font-size:12.5px;color:var(--muted)}
+.org-group>summary .chev{margin-left:auto;color:var(--muted);flex:none;transition:transform .15s}
+.org-group[open]>summary .chev{transform:rotate(90deg)}
+.org-group[open]>summary{border-bottom:1px solid var(--line);margin-bottom:10px}
+.org-group.none>summary .nm{color:var(--muted);font-style:italic}
+.org-group>.list{padding:0 10px 10px}
 .eq-group{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
 .eq-group>summary{list-style:none;display:flex;align-items:center;gap:12px;padding:14px;min-height:64px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .eq-group>summary::-webkit-details-marker{display:none}
@@ -766,9 +778,10 @@ function renderChip(){ const el=$("#storeChip"); if(!el) return; el.className="c
 function renderHome(){
   S.view="home";
   const aud=S.audits;
-  const auditsHTML = aud.length ? aud.map(a=>{ const f=FORM_BY[a.code]; if(!f) return ""; const c=counts(a);
+  const auditCard=a=>{ const f=FORM_BY[a.code]; if(!f) return ""; const c=counts(a);
       const who=[a.cover[14],a.cover[10]].filter(Boolean).map(esc).join(" · ")||"Enspektör ve yer henüz girilmedi";
-      return `<div class="audit-wrap"><button class="audit-del" data-delaudit="${a.id}" aria-label="${esc(f.code+" "+f.name)} denetimini sil" title="Denetimi sil">${ICON.trash}</button>${S.downloads?`<button class="audit-ph" data-phzip="${a.id}" aria-label="${esc(f.code+" "+f.name)} fotoğraflarını toplu indir" title="Fotoğrafları toplu indir">${ICON.cam}</button>`:""}<button class="audit-card" data-open="${a.id}"><span class="code">${esc(f.code)}</span>${sonucPill(a.sonuc)}<h3>${esc(f.name)}</h3><span class="meta">${who}<br><span class="num">${isoToTr(a.cover[9])||fmtDate(a.createdAt)} · ${c.total-c.empty}/${c.total} madde · ${c.UD} UD</span></span><div class="bar-slot" style="grid-column:1/-1">${barHTML(c)}</div></button></div>`; }).join("")
+      return `<div class="audit-wrap"><button class="audit-del" data-delaudit="${a.id}" aria-label="${esc(f.code+" "+f.name)} denetimini sil" title="Denetimi sil">${ICON.trash}</button>${S.downloads?`<button class="audit-ph" data-phzip="${a.id}" aria-label="${esc(f.code+" "+f.name)} fotoğraflarını toplu indir" title="Fotoğrafları toplu indir">${ICON.cam}</button>`:""}<button class="audit-card" data-open="${a.id}"><span class="code">${esc(f.code)}</span>${sonucPill(a.sonuc)}<h3>${esc(f.name)}</h3><span class="meta">${who}<br><span class="num">${isoToTr(a.cover[9])||fmtDate(a.createdAt)} · ${c.total-c.empty}/${c.total} madde · ${c.UD} UD</span></span><div class="bar-slot" style="grid-column:1/-1">${barHTML(c)}</div></button></div>`; };
+  const auditsHTML = aud.length ? orgGroupsHTML(aud,auditCard)
     : `<div class="empty">Henüz kayıtlı tanık denetimi yok.<br>Aşağıdan ekipman türünü seçerek ilk denetimi başlatın.</div>`;
   $("#app").innerHTML = `
   <div class="wrap">
@@ -781,7 +794,7 @@ function renderHome(){
       ${PWA && !EMBED && !isStandalone() ? (IS_MOBILE ? (/Android/i.test(navigator.userAgent||"") ? `<div class="install">Uygulama gibi kullanmak için Chrome’da sağ üstteki <b>⋮ menü</b>ye, ardından <b>Uygulamayı yükle</b> (veya <b>Ana ekrana ekle</b>) seçeneğine dokunun. İnternet olmadan da çalışır.</div>` : `<div class="install">Uygulama gibi kullanmak için Safari’de <b>Paylaş</b> düğmesine, ardından <b>Ana Ekrana Ekle</b>’ye dokunun. İnternet olmadan da çalışır.</div>`) : `<div class="install">Bilgisayarda uygulama olarak kurmak için Edge veya Chrome’da adres çubuğunun sağındaki <b>Uygulamayı yükle</b> simgesine (ya da <b>⋯ menü → Uygulamalar → Bu siteyi uygulama olarak yükle</b>) tıklayın. Başlat menüsünden ve masaüstünden açılır, internet olmadan da çalışır.</div>`):""}
     </header>
     <div class="sec-title"><h2>Denetimlerim</h2><span class="muted num">${aud.length} kayıt</span></div>
-    <div class="list">${auditsHTML}</div>
+    <div class="org-groups">${auditsHTML}</div>
     ${aud.length&&S.downloads?`<button class="btn" id="allDocxBtn" style="margin-top:10px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (Word)</button><button class="btn" id="allPdfBtn" style="margin-top:8px;width:100%">${ICON.doc}Tüm ekipmanların F701-056 raporları (PDF)</button><button class="btn" id="auditListBtn" style="margin-top:8px;width:100%">${ICON.xls}Tanık denetim listesi – alan/tür bazında (Excel)</button><button class="btn" id="allPhotosBtn" style="margin-top:8px;width:100%">${ICON.cam}Tüm ekipmanların fotoğraflarını indir</button>`:""}
     <div class="sec-title"><h2>Formlarda ara</h2><span class="muted">${FORMS.length} form · ${FORMS.reduce((n,f)=>n+f.sections.reduce((m,s)=>m+s.items.length,0),0)} madde</span></div>
     <div class="searchbar">${ICON.search}<input id="homeQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ör. fren testi, kalibrasyon, 7.1.6, halat" value="${esc(S.hq)}">${S.hq?`<button class="clr" id="homeQClear">Temizle</button>`:""}</div>
@@ -804,6 +817,23 @@ function renderHome(){
 
 const EQ_SUBS={"1.A.1":"Vinç Grubu","1.A.3":"Mobil / Yükleyici Kren Grubu","1.A.5":"Yüzer Kren Grubu","1.A.6":"Kollu Kren Grubu","1.A.8":"El Tahrikli Vinç ve Çektirme Grubu","1.A.13":"Taşıt Kaldırma Donanımı ve Kriko Grubu","1.A.16":"Endüstriyel Araç (Forklift) Grubu","1.A.17":"Yürüyen Merdiven / Bant Grubu","1.A.19":"Güç Tahrikli Park Ettirme Teçhizatı Grubu","1.A.20":"Kablolu Taşıma Tesisatı Grubu","2.A.1":"Otoklav ve Buharlı Kaplar Grubu","2.A.2":"Hava ve Genleşme Tankları Grubu","3.A.1":"Buhar Kazanları Grubu","3.A.2":"Kızgın Su ve Sıcak Su Kazanları Grubu","7.A.1":"Elektrik Tahrikli Asansörler (EK-5/A, EK-5/B)","7.A.2":"Hidrolik Tahrikli Asansörler (EK-6/A, EK-6/B)"};
 const EQ_GROUPS=[{p:"1.",code:"1.A",name:"Kaldırma ve İletme"},{p:"2.",code:"2.A",name:"Basınçlı Kaplar"},{p:"3.",code:"3.A",name:"Kazanlar"},{p:"7.",code:"7.A",name:"Asansörler (Periyodik Kontrol)"}];
+/* Denetimlerim: muayene kuruluşu adına göre gruplama (Kapak → Muayene Kuruluşu) */
+function orgKey(n){ return String(n||"").replace(/\s+/g," ").trim().toLocaleLowerCase("tr").replace(/ı/g,"i").replace(/[.,]/g," ").replace(/\s+/g," ").trim().replace(/(\s+(a\s?ş|ltd\s?şti|ltd|şti|san\s?ve\s?tic|tic))+$/,"").trim(); }
+function orgOpenGet(){ if(!S.orgOpen){ S.orgOpen={}; try{ S.orgOpen=JSON.parse(localStorage.getItem("orgOpen")||"{}")||{}; }catch(e){} } return S.orgOpen; }
+function orgGroupsHTML(aud,card){
+  const map=new Map();
+  aud.forEach(a=>{ if(!FORM_BY[a.code]) return; const nm=String(a.cover[7]||"").replace(/\s+/g," ").trim(); const k=nm?orgKey(nm)||nm.toLocaleLowerCase("tr"):"";
+    if(!map.has(k)) map.set(k,{k,name:nm,items:[],sp:{}}); const g=map.get(k); g.items.push(a); if(nm) g.sp[nm]=(g.sp[nm]||0)+1; });
+  map.forEach(g=>{ const best=Object.entries(g.sp).sort((x,y)=>y[1]-x[1])[0]; if(best) g.name=best[0]; }); // en sık yazım
+  const gs=[...map.values()].sort((x,y)=>(!x.k)-(!y.k)||x.name.localeCompare(y.name,"tr"));
+  const op=orgOpenGet(); const single=gs.length===1;
+  return gs.map(g=>{ const key=g.k||"__yok"; const open=single||op[key]!==false;
+    const dates=g.items.map(a=>a.cover[9]).filter(v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")).sort();
+    const ud=g.items.reduce((n,a)=>n+counts(a).UD,0);
+    const ini=g.k?g.name.split(" ").filter(Boolean).slice(0,2).map(w=>w.charAt(0).toLocaleUpperCase("tr")).join(""):"?";
+    return `<details class="org-group${g.k?"":" none"}" data-org="${esc(key)}"${open?" open":""}><summary><span class="org-ic" aria-hidden="true">${esc(ini)}</span><span style="min-width:0"><span class="nm">${esc(g.name||"Muayene kuruluşu girilmemiş")}</span><br><span class="cnt num">${g.items.length} denetim${dates.length?" · "+isoToTr(dates[0])+(dates.length>1&&dates[dates.length-1]!==dates[0]?" – "+isoToTr(dates[dates.length-1]):""):""}${ud?" · "+ud+" UD":""}</span></span><span class="chev">${ICON.chev}</span></summary><div class="list">${g.items.map(card).join("")}</div></details>`; }).join("");
+}
+document.addEventListener("toggle",e=>{ const d=e.target; if(!d||!d.classList||!d.classList.contains("org-group")) return; const op=orgOpenGet(); op[d.dataset.org]=d.open; try{ localStorage.setItem("orgOpen",JSON.stringify(op)); }catch(err){} },true);
 function eqOpenGet(){ if(!S.eqOpen){ S.eqOpen={}; try{ S.eqOpen=JSON.parse(localStorage.getItem("eqOpen")||"{}")||{}; }catch(e){} } return S.eqOpen; }
 function eqGridHTML(){
   const ts=terms(S.eqq||""); const list=FORMS.filter(f=>!ts.length||hasAll(f.code+" "+f.name+" "+(EQ_SUBS[subKey(f.code)]||""),ts));
