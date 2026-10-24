@@ -947,9 +947,9 @@ function docRowHTML(d,i){ return `<div class="doc-row"><span class="dn num">${i+
   <input data-doc="a" value="${esc(d.a)}" placeholder="Doküman adı" aria-label="Doküman adı" autocomplete="off">
   <input data-doc="r" value="${esc(d.r)}" placeholder="Rev. no / tarih (ör. Rev05_29.01.2026)" aria-label="Revizyon" autocomplete="off">
   <button type="button" class="btn doc-del" data-docdel="1" aria-label="Dokümanı sil" title="Sil">${ICON.trash}</button></div>`; }
-function docsCoverHTML(a){ const rows=docRows(a); const list=rows.length?rows:[{k:"",a:"",r:""}];
+function docsCoverHTML(a){ if(docsMergeFromKalip(a)) touch(); const rows=docRows(a); const list=rows.length?rows:[{k:"",a:"",r:""}];
   return `<section class="group"><h2>Kuruluş dokümanları</h2>
-    <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir.</p>
+    <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir. Rapor sekmesindeki yorum kalıplarına yazılan dokümanlar (sözleşme formu, prosedür, talimat, iş emri, kayıt ve rapor formu vb.) da buraya kendiliğinden eklenir.</p>
     <div class="doc-head"><span></span><span>Kod</span><span>Doküman adı</span><span>Revizyon no / tarihi</span><span></span></div>
     <div id="docRows">${list.map(docRowHTML).join("")}</div>
     <button type="button" class="btn" id="docAdd" style="margin-top:8px">${ICON.plus}Doküman ekle</button></section>`; }
@@ -1463,6 +1463,16 @@ const KALIP=[
 ];
 // 11. kriter dışındakilere de isteğe bağlı bulgu alanı
 KALIP.forEach((K,i)=>{ if(i!==11 && i!==4){ K.f.push(["b"+i+"no","Bulgu no (YD ise)","text"],["b"+i+"t","Bulgu metni (YD ise)","area"]); const ob=K.b; K.b=(k,st)=>{ const r=ob(k,st); return r.concat([bulguEk(k,i).replace(/^\n/,"")]); }; } });
+function docKeys(){ const s=new Set(); KALIP.forEach(K=>K.f.forEach(f=>{ if(f[2]==="doc") s.add(f[0]); })); return s; }
+function parseDoc(v){ v=String(v||"").trim(); if(!v) return null; if(v.includes("|")){ const p=v.split("|").map(x=>x.trim()); return {k:p[0]||"",a:p[1]||"",r:p.slice(2).join(" | ")}; }
+  let r=""; const m=v.match(/\s*\(([^()]*)\)\s*$/); if(m){ r=m[1].trim(); v=v.slice(0,m.index).trim(); }
+  let k=""; const c=v.match(/^([A-Za-zÇĞİÖŞÜçğıöşü]{1,6}[.\-]?[0-9][0-9A-Za-z.\-\/]*)\s+(.*)$/); if(c){ k=c[1]; v=c[2].trim(); }
+  return {k,a:v,r}; }
+function docsMergeFromKalip(a){ const k=kalipK(a); const rows=docRows(a); const keyOf=d=>(d.k?("k:"+d.k):("a:"+d.a)).toLocaleLowerCase("tr");
+  const have=new Set(rows.map(keyOf)); let n=0;
+  docKeys().forEach(key=>{ const d=parseDoc(k[key]); if(!d||(!d.k&&!d.a)) return; const id=keyOf(d); if(have.has(id)) return; have.add(id); rows.push(d); n++; });
+  if(n) rep(a).doclist=rows.map(d=>[d.k,d.a,d.r].join(" | ").replace(/( \| )+$/,"")).join("\n");
+  return n; }
 function kalipK(a){ const r=rep(a); if(!r.k) r.k={}; return r.k; }
 function kalipText(a,i){ const k=kalipK(a); const st=effRow(a,i).s; return KALIP[i].b(k,st).filter(x=>x&&String(x).trim()).join("\n"); }
 function kalipHTML(a,i){
@@ -2280,6 +2290,7 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.id==="filterSel"){ S.filter=e.target.value; renderTab(); }
+  else if(e.target.dataset && e.target.dataset.rk && docKeys().has(e.target.dataset.rk) && S.cur){ const n=docsMergeFromKalip(S.cur); if(n){ touch(); const dl=$("#docDL"); if(dl) dl.innerHTML=docOpts(S.cur).map(o=>`<option value="${esc(o)}"></option>`).join(""); const ta=$("#rp-doclist"); if(ta) ta.value=rep(S.cur).doclist; toast("Doküman Kapak’taki kuruluş dokümanları listesine eklendi"); } }
   else if(e.target.dataset && e.target.dataset.repchk){ rep(S.cur)[e.target.dataset.repchk]=e.target.checked; touch(); }
   else if(e.target.id==="photoInput"||e.target.id==="cameraInput"){ onPhotos([...e.target.files]); }
   else if(e.target.id==="importInput" && e.target.files[0]){ importJSON(e.target.files[0]); }
