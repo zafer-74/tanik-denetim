@@ -403,6 +403,13 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .kalip input,.kalip textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:8px 10px;font-size:14px;min-height:0}
 .kalip .kbtn{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .kalip .kbtn .hint{margin:0;font-size:12.5px}
+.doc-head,.doc-row{display:grid;grid-template-columns:22px 1.1fr 2fr 1.2fr 40px;gap:6px;align-items:center}
+.doc-head{font-size:12px;color:var(--muted);font-weight:600;padding:0 0 4px}
+.doc-row{margin-bottom:6px}
+.doc-row .dn{font-size:12.5px;color:var(--muted);text-align:right}
+.doc-row input{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 10px;font-size:14px}
+.doc-del{min-height:38px;padding:0;width:40px;color:var(--ud)}
+@media (max-width:640px){.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/4;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/4;align-self:start}}
 .bulgu-prev{white-space:pre-wrap;font-size:13.5px;color:var(--bulgu,#C00000);background:var(--surface-2);border-radius:8px;padding:8px 10px;border-left:4px solid var(--bulgu,#C00000)}
 .bulgu-prev span{display:block;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);margin-bottom:2px}
 .brenk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -933,6 +940,21 @@ function renderTab(){
 }
 
 /* --- kapak --- */
+/* --- kapak: kuruluş dokümanları (satır satır; Rapor sekmesindeki doküman listesiyle ortak) --- */
+function docRows(a){ return String(rep(a).doclist||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); return p.length>=2?{k:p[0]||"",a:p[1]||"",r:p.slice(2).join(" | ")}:{k:"",a:l,r:""}; }); }
+function docRowHTML(d,i){ return `<div class="doc-row"><span class="dn num">${i+1}</span>
+  <input data-doc="k" value="${esc(d.k)}" placeholder="Kod (ör. PR-104.1.7.001)" aria-label="Doküman kodu" autocomplete="off">
+  <input data-doc="a" value="${esc(d.a)}" placeholder="Doküman adı" aria-label="Doküman adı" autocomplete="off">
+  <input data-doc="r" value="${esc(d.r)}" placeholder="Rev. no / tarih (ör. Rev05_29.01.2026)" aria-label="Revizyon" autocomplete="off">
+  <button type="button" class="btn doc-del" data-docdel="1" aria-label="Dokümanı sil" title="Sil">${ICON.trash}</button></div>`; }
+function docsCoverHTML(a){ const rows=docRows(a); const list=rows.length?rows:[{k:"",a:"",r:""}];
+  return `<section class="group"><h2>Kuruluş dokümanları</h2>
+    <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir.</p>
+    <div class="doc-head"><span></span><span>Kod</span><span>Doküman adı</span><span>Revizyon no / tarihi</span><span></span></div>
+    <div id="docRows">${list.map(docRowHTML).join("")}</div>
+    <button type="button" class="btn" id="docAdd" style="margin-top:8px">${ICON.plus}Doküman ekle</button></section>`; }
+function docsSync(){ const a=S.cur; if(!a) return; const lines=[...document.querySelectorAll("#docRows .doc-row")].map(r=>{ const g=k=>r.querySelector(`[data-doc="${k}"]`).value.trim(); const k=g("k"),n=g("a"),v=g("r"); return (k||n||v)?[k,n,v].join(" | ").replace(/( \| )+$/,""):""; }).filter(Boolean);
+  rep(a).doclist=lines.join("\n"); document.querySelectorAll("#docRows .doc-row .dn").forEach((x,i)=>x.textContent=i+1); touch(); }
 function coverHTML(){
   const a=S.cur, f=FORM_BY[a.code]; let html="", open=false;
   const others=othersOf(a);
@@ -953,6 +975,7 @@ function coverHTML(){
     if(x.row===11) html+=`<div class="field"><label for="cvDenNo">Denetim No</label><input id="cvDenNo" data-rep="denetimNo" value="${esc(rep(a).denetimNo||"")}" placeholder="TÜRKAK denetim numarası" autocomplete="off"></div>`;
   });
   if(open) html+="</div></section>";
+  html+=docsCoverHTML(a);
   return html + `<p class="hint">${esc(f.method)}</p>`;
 }
 
@@ -1391,7 +1414,7 @@ function autoGenel(a){
 }
 function autoAlan(a){ const f=FORM_BY[a.code]; const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(", "); const alan=f.code.startsWith("2.")?"Basınçlı kaplar":f.code.startsWith("3.")?"Kazanlar":f.code.startsWith("7.")?"Asansörler":"Kaldırma ve iletme ekipmanları"; return alan+" – "+f.name+" ("+f.code+")\nPeriyodik kontrol"+(eq?"\n"+eq:""); }
 function repVal(a,k){ const r=rep(a); if(r[k]!==undefined&&r[k]!==null) return r[k];
-  if(k==="alan") return autoAlan(a); if(k==="personel") return ensNames(a,"\n"); if(k==="std") return a.cover[27]||""; if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
+  if(k==="alan") return autoAlan(a); if(k==="personel") return ensNames(a,"\n"); if(k==="std") return [a.cover[27]||"",...docOpts(a)].filter(x=>x&&x.trim()).join(", "); if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
 function photoCount(no){ return S.photos.filter(p=>p.itemNo===no).length; }
 function thumbsFor(no){ const ph=S.photos.filter(p=>p.itemNo===no); return ph.length?`<div class="thumbs">${ph.map(p=>`<button class="thumb" data-photo="${p.id}" aria-label="Fotoğrafı aç"><img src="${p.data}" alt=""></button>`).join("")}</div>`:""; }
 /* ================= F701-056 doldurulabilir kalıplar (yorum cümleleri) ================= */
@@ -1497,7 +1520,7 @@ function repHTML(){
     <p class="hint" style="margin:0 0 8px">Kuruluşun doküman listesinin veya doküman kapak sayfalarının fotoğrafını ekleyin. Yapay zekâ kod, ad ve revizyonları buraya döker; yorumlar yazılırken bu liste kullanılır.</p>
     ${thumbsFor("RDOC")}
     <div class="item-tools" style="margin:8px 0"><button class="btn" data-addphoto="RDOC">${ICON.cam}Fotoğraf ekle${photoCount("RDOC")?" ("+photoCount("RDOC")+")":""}</button>${aiShown()?`<button class="btn ai-btn" id="aiDocList">${ICON.spark}Fotoğraflardan listeyi çıkar</button>`:""}</div>
-    <div class="fields"><div class="field"><label for="rp-doclist">Doküman listesi (KOD | Ad | Revizyon)</label><textarea id="rp-doclist" data-rep="doclist" rows="5" placeholder="PR-104.1.7.001 | İş Ekipmanları Periyodik Kontrol Ve Muayene Prosedürü | Rev05_29.01.2026">${esc(r.doclist||"")}</textarea></div></div>
+    <div class="fields"><div class="field"><label for="rp-doclist">Doküman listesi (KOD | Ad | Revizyon) — Kapak sekmesinde satır satır da girilebilir</label><textarea id="rp-doclist" data-rep="doclist" rows="5" placeholder="PR-104.1.7.001 | İş Ekipmanları Periyodik Kontrol Ve Muayene Prosedürü | Rev05_29.01.2026">${esc(r.doclist||"")}</textarea></div></div>
   </section>
   <section class="group"><h2>Bulgu rengi</h2>
     <p class="hint" style="margin:0 0 8px">Yorumlarda “Bulgu…” ile başlayan satırlar Word raporunda bu renkte yazılır. Seçim bu denetime kaydedilir ve sonraki denetimler için varsayılan olur.</p>
@@ -2060,7 +2083,7 @@ function repaintCoverKeep(){ const y=window.scrollY; renderTab(); window.scrollT
 
 /* ================= kapak bilgilerini kopyalama ================= */
 const COPY_GROUPS=[
-  {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"}]},
+  {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"},{k:"r:doclist",label:"Kuruluş dokümanları"}]},
   {id:"ens",title:"Denetlenen enspektör",fields:[{k:"e:list",label:"Enspektör(ler) – ad, ünvan, EKİPNET, yetkilendirme tarihi"}]},
   {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
 ];
@@ -2189,6 +2212,8 @@ document.addEventListener("click",async e=>{
   if(d.rreset!==undefined){ const rr=rep(S.cur).rows[+d.rreset]; if(rr) delete rr.c; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(d.kalip!==undefined){ const i=+d.kalip; const txt=kalipText(S.cur,i); const rr=rep(S.cur).rows[i]||(rep(S.cur).rows[i]={}); rr.c=txt; if(i===4&&!rr.s) rr.s="UD"; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast((i+1)+". kriterin yorumu alanlardan oluşturuldu"); return; }
   if(d.brenk){ setBulguRenk(d.brenk); return; }
+  if(t.id==="docAdd"){ const box=$("#docRows"); if(!box) return; const n=box.querySelectorAll(".doc-row").length; box.insertAdjacentHTML("beforeend",docRowHTML({k:"",a:"",r:""},n)); box.lastElementChild.querySelector("input").focus(); return; }
+  if(d.docdel){ const row=t.closest(".doc-row"), box=$("#docRows"); if(row&&box){ if(box.querySelectorAll(".doc-row").length>1) row.remove(); else row.querySelectorAll("input").forEach(i=>i.value=""); docsSync(); } return; }
   if(d.kgenel){ rep(S.cur).genel=kalipGenel(S.cur); touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast("Genel değerlendirme kalıptan oluşturuldu"); return; }
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
   if(t.id==="jsonBtn"){ await flush(); exportJSON([S.cur]); return; }
@@ -2248,6 +2273,7 @@ document.addEventListener("input",e=>{
     const item=el.closest(".item"); const need=item&&item.querySelector(".need"); if(need&&el.value) need.remove(); }
   else if(el.dataset.top){ S.cur[el.dataset.top]=el.value; touch(); }
   else if(el.dataset.rep){ rep(S.cur)[el.dataset.rep]=el.value; touch(); }
+  else if(el.dataset.doc){ docsSync(); }
   else if(el.id==="brCustom"){ setBulguRenk(el.value); }
   else if(el.dataset.rk){ kalipK(S.cur)[el.dataset.rk]=el.value; document.querySelectorAll('[data-rk="'+el.dataset.rk+'"]').forEach(o=>{ if(o!==el) o.value=el.value; }); touch(); }
   else if(el.dataset.rc!==undefined){ const rr=rep(S.cur).rows[+el.dataset.rc]||(rep(S.cur).rows[+el.dataset.rc]={}); rr.c=el.value; touch(); const bp=$("#bp-"+el.dataset.rc); if(bp){ const t=bulguPart(el.value); bp.hidden=!t; bp.innerHTML="<span>Word raporunda kırmızı yazılacak bulgu:</span>"+esc(t); } }
