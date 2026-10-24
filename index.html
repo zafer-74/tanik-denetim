@@ -421,6 +421,8 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .role-grid label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;cursor:pointer}
 .role-grid input{margin-top:3px;width:auto}
 .chip-r.auto{background:var(--u-bg,#fff4e0);color:var(--u,#9a5b00)}.chip-r small{font-weight:500;opacity:.8}
+.std-chk{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;padding:6px 2px;border-bottom:1px dashed var(--line);margin-bottom:4px;cursor:pointer}.std-chk input{margin-top:3px;width:auto}
+.std-pick>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--steel)}.std-pick>summary::-webkit-details-marker{display:none}.std-pick>summary svg{width:18px;height:18px;flex:none}.std-pick>summary .chev{margin-left:auto;transition:transform .15s}.std-pick[open]>summary .chev{transform:rotate(90deg)}
 .from-cover{color:var(--u);font-weight:600}
 .doc-del{min-height:38px;padding:0;width:40px;color:var(--ud)}
 @media (max-width:640px){.doc-roles{grid-column:1/-1}.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/5;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/5;align-self:start}}
@@ -1012,6 +1014,7 @@ function applyDocRoles(a){ const m=docRoleMap(a), rows=docRows(a), K=kalipK(a), 
 function chipR(a,r){ const au=(rep(a).docRolesAuto||{})[r]; return `<span class="chip-r${au?" auto":""}" title="${au?"Otomatik önerildi — gerekirse düzeltin":""}">${esc(DOC_ROLES.find(x=>x[0]===r)[1])}${au?" <small>öneri</small>":""}</span>`; }
 function docRolesHTML(a,d){ const sel=d?rolesOfDoc(a,d):[];
   return `<details class="doc-roles"><summary><span class="lbl">Raporda kullanılacağı yer:</span> <span class="chips">${sel.length?sel.map(r=>chipR(a,r)).join(""):`<span class="muted">seçilmedi</span>`}</span><span class="chev">${ICON.chev}</span></summary>
+    ${d?`<label class="std-chk"><input type="checkbox" data-stdsel="${esc("d:"+docKey(d))}"${stdOn(a,{id:"d:"+docKey(d)})?" checked":""}><span>Form başlığındaki <b>“Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no”</b> alanına ekle</span></label>`:""}
     <div class="role-grid">${DOC_ROLES.map(([r,l,w])=>`<label><input type="checkbox" data-docrole="${r}"${sel.includes(r)?" checked":""}><span>${esc(l)} <small class="muted">· ${esc(w)}</small></span></label>`).join("")}</div></details>`; }
 function docRows(a){ return String(rep(a).doclist||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); return p.length>=2?splitRev({k:p[0]||"",a:p[1]||"",r:p[2]||"",t:p.slice(3).join(" ")}):{k:"",a:l,r:"",t:""}; }); }
 function docRowHTML(d,i){ return `<div class="doc-row"><span class="dn num">${i+1}</span>
@@ -1492,8 +1495,20 @@ function autoGenel(a){
   return parts.join("\n");
 }
 function autoAlan(a){ const f=FORM_BY[a.code]; const eq=[a.cover[21],a.cover[22]].filter(Boolean).join(", "); const alan=f.code.startsWith("2.")?"Basınçlı kaplar":f.code.startsWith("3.")?"Kazanlar":f.code.startsWith("7.")?"Asansörler":"Kaldırma ve iletme ekipmanları"; return alan+" – "+f.name+" ("+f.code+")\nPeriyodik kontrol"+(eq?"\n"+eq:""); }
+// F701-056 "Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no" alanı için seçilebilir kalemler
+function stdItems(a){ const f=FORM_BY[a.code]||{}, out=[], seen=new Set(); const add=(id,txt,src)=>{ txt=String(txt||"").trim(); const lk=txt.toLocaleLowerCase("tr"); if(!txt||seen.has(lk)) return; seen.add(lk); out.push({id,txt,src}); };
+  const c27=String(a.cover[27]||"").trim(); if(c27) add("c27",c27,"Kapak – uygulanan standart");
+  const mt=String(f.method||"").split("Metot:")[1]||""; mt.split("·").map(x=>x.trim()).filter(Boolean).forEach(x=>{ if(c27 && c27.toLocaleLowerCase("tr").includes(x.toLocaleLowerCase("tr"))) return; add("m:"+x,x,"Formun metodu"); });
+  docRows(a).forEach(d=>{ if(d.k||d.a) add("d:"+docKey(d),docFmt(d),"Kuruluş dokümanı"); });
+  return out; }
+function stdOn(a,it){ const m=rep(a).stdSel||{}; return (it.id in m)?!!m[it.id]:!it.id.startsWith("m:"); }
+function stdText(a){ return stdItems(a).filter(it=>stdOn(a,it)).map(it=>it.txt).join(", "); }
+function stdPickHTML(a){ const L=stdItems(a);
+  return `<details class="std-pick" open><summary>${ICON.doc}Alana eklenecekleri seçin <span class="muted">(${L.filter(it=>stdOn(a,it)).length}/${L.length})</span><span class="chev">${ICON.chev}</span></summary>
+    ${L.length?`<div class="role-grid">${L.map(it=>`<label><input type="checkbox" data-stdsel="${esc(it.id)}"${stdOn(a,it)?" checked":""}><span>${esc(it.txt)} <small class="muted">· ${esc(it.src)}</small></span></label>`).join("")}</div>`:`<p class="hint">Kapak’ta standart veya kuruluş dokümanı girilmemiş.</p>`}
+    <p class="hint" style="margin:4px 0 0">İşaretlemeler yukarıdaki metni yeniden oluşturur; metni sonra elle düzeltebilirsiniz.</p></details>`; }
 function repVal(a,k){ const r=rep(a); if(r[k]!==undefined&&r[k]!==null) return r[k];
-  if(k==="alan") return autoAlan(a); if(k==="personel") return ensNames(a,"\n"); if(k==="std") return [a.cover[27]||"",...docOpts(a)].filter(x=>x&&x.trim()).join(", "); if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
+  if(k==="alan") return autoAlan(a); if(k==="personel") return ensNames(a,"\n"); if(k==="std") return stdText(a); if(k==="teknik") return a.tanik||""; if(k==="lider") return a.cover[11]||""; if(k==="tarih") return a.cover[9]||""; if(k==="genel") return autoGenel(a); return ""; }
 function photoCount(no){ return S.photos.filter(p=>p.itemNo===no).length; }
 function thumbsFor(no){ const ph=S.photos.filter(p=>p.itemNo===no); return ph.length?`<div class="thumbs">${ph.map(p=>`<button class="thumb" data-photo="${p.id}" aria-label="Fotoğrafı aç"><img src="${p.data}" alt=""></button>`).join("")}</div>`:""; }
 /* ================= F701-056 doldurulabilir kalıplar (yorum cümleleri) ================= */
@@ -1604,6 +1619,7 @@ function repHTML(){
     <div class="field"><label class="toggle" for="rp-kg"><input type="checkbox" id="rp-kg" data-repchk="kapsamGen" ${r.kapsamGen?"checked":""}>Kapsam genişletme</label></div>
     ${fld("personel","Muayene personeli (unvanıyla; her satıra bir kişi)",{area:true,rows:3})}
     ${fld("std","Standartlar / kuruluş içi dokümanlar ve yılı / revizyon no",{area:true,rows:2})}
+    <div class="field" id="stdPick">${stdPickHTML(a)}</div>
   </div></section>
   ${aiShown()?`<div class="ai-card"><p>Çeklistten gelen yorumları resmi rapor diline çevirin veya genel değerlendirme taslağı yazdırın.</p><div class="row"><button class="btn" id="aiReport">${ICON.spark}Yapay zekâ ile düzenle</button></div></div>`:""}
   <section class="group"><h2>Kuruluş doküman listesi</h2>
@@ -2371,6 +2387,8 @@ document.addEventListener("input",e=>{
 document.addEventListener("change",e=>{
   if(e.target.id==="filterSel"){ S.filter=e.target.value; renderTab(); }
   else if(e.target.dataset && e.target.dataset.doc && S.cur && $("#docRows")){ docsSync(); const n=autoRoles(S.cur); if(n){ refreshDocRoles(S.cur); docsSync(); toast(n+" rapor yeri otomatik işaretlendi — “Raporda kullanılacağı yer”den kontrol edin"); } }
+  else if(e.target.dataset && e.target.dataset.stdsel!==undefined && S.cur){ const rr=rep(S.cur); (rr.stdSel||(rr.stdSel={}))[e.target.dataset.stdsel]=e.target.checked; delete rr.std; touch();
+    const ta=$("#rp-std"); if(ta) ta.value=repVal(S.cur,"std"); const sp=$("#stdPick"); if(sp){ sp.innerHTML=stdPickHTML(S.cur); } }
   else if(e.target.dataset && e.target.dataset.docrole){ const rr=rep(S.cur), ro=e.target.dataset.docrole; (rr.docRolesManual||(rr.docRolesManual={}))[ro]=true; if(rr.docRolesAuto) delete rr.docRolesAuto[ro]; if(e.target.checked){ document.querySelectorAll(`#docRows [data-docrole="${e.target.dataset.docrole}"]`).forEach(c=>{ if(c!==e.target) c.checked=false; }); } docsSync(); const R=DOC_ROLES.find(x=>x[0]===e.target.dataset.docrole); if(e.target.checked) toast("Rapor’da "+R[2]+" alanına yazıldı: "+R[1]); }
   else if(e.target.dataset && e.target.dataset.rk && docKeys().has(e.target.dataset.rk) && S.cur){ const n=docsMergeFromKalip(S.cur); if(n){ touch(); const dl=$("#docDL"); if(dl) dl.innerHTML=docOpts(S.cur).map(o=>`<option value="${esc(o)}"></option>`).join(""); const ta=$("#rp-doclist"); if(ta) ta.value=rep(S.cur).doclist; toast("Doküman Kapak’taki kuruluş dokümanları listesine eklendi"); } }
   else if(e.target.dataset && e.target.dataset.repchk){ rep(S.cur)[e.target.dataset.repchk]=e.target.checked; touch(); }
