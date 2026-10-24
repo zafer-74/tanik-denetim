@@ -408,8 +408,20 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .doc-row{margin-bottom:6px}
 .doc-row .dn{font-size:12.5px;color:var(--muted);text-align:right}
 .doc-row input{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 10px;font-size:14px}
+.doc-roles{grid-column:2/-1;margin-top:-2px}
+.doc-roles>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;padding:4px 2px;color:var(--muted)}
+.doc-roles>summary::-webkit-details-marker{display:none}
+.doc-roles>summary .lbl{font-weight:600;color:var(--steel)}
+.doc-roles>summary .chev{margin-left:auto;transition:transform .15s}
+.doc-roles[open]>summary .chev{transform:rotate(90deg)}
+.doc-roles .chips{display:inline-flex;gap:4px;flex-wrap:wrap}
+.chip-r{background:var(--g-bg);color:var(--g);border-radius:999px;padding:2px 8px;font-weight:600;font-size:12px}
+.role-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:4px 12px;padding:6px 2px 8px}
+.role-grid label{display:flex;gap:8px;align-items:flex-start;font-size:13.5px;cursor:pointer}
+.role-grid input{margin-top:3px;width:auto}
+.from-cover{color:var(--u);font-weight:600}
 .doc-del{min-height:38px;padding:0;width:40px;color:var(--ud)}
-@media (max-width:640px){.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/4;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/4;align-self:start}}
+@media (max-width:640px){.doc-roles{grid-column:1/-1}.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/4;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/4;align-self:start}}
 .bulgu-prev{white-space:pre-wrap;font-size:13.5px;color:var(--bulgu,#C00000);background:var(--surface-2);border-radius:8px;padding:8px 10px;border-left:4px solid var(--bulgu,#C00000)}
 .bulgu-prev span{display:block;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);margin-bottom:2px}
 .brenk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -941,20 +953,49 @@ function renderTab(){
 
 /* --- kapak --- */
 /* --- kapak: kuruluş dokümanları (satır satır; Rapor sekmesindeki doküman listesiyle ortak) --- */
+const DOC_ROLES=[
+ ["teklifForm","Teklif / sözleşme formu","1. ve 7. kriter",["teklifForm","hazForm"]],
+ ["isEmriProsedur","İş emri sistemini tanımlayan prosedür","2. kriter",["isEmriProsedur"]],
+ ["isEmriForm","İş emri / saha görev formu","2. kriter",["isEmriForm"]],
+ ["erisimProsedur","Doküman kontrol / erişim prosedürü","3. kriter",["erisimProsedur"]],
+ ["isgTalimat","İş güvenliği talimatı","4. kriter",["isgTalimat"]],
+ ["ucTalimat","Bilgi doğrulama talimatı","6. kriter",["ucTalimat"]],
+ ["hazTalimat","Müşteri hazırlık talimatı","7. kriter",["hazTalimat"]],
+ ["hasarProsedur","Hasar / bozulma önleme prosedürü","8. kriter",["hasarProsedur"]],
+ ["kalProsedur","Kalibrasyon / doğrulama prosedürü","10. kriter",["kalProsedur"]],
+ ["tarafForm","Tarafsızlık taahhütnamesi","11. kriter",["tarafForm"]],
+ ["kayitForm","Saha kayıt / kontrol formu","13. ve 14. kriter",["kayitForm"]],
+ ["raporForm","Rapor formu","15. kriter",["raporForm"]],
+];
+const docFmt=d=>[d.k,d.a].filter(Boolean).join(" ")+(d.r?" ("+d.r+")":"");
+const docKey=d=>(d.k?("k:"+d.k):("a:"+d.a)).toLocaleLowerCase("tr");
+function docRoleMap(a){ const r=rep(a); if(!r.docRoles) r.docRoles={}; return r.docRoles; } // rol -> doküman anahtarı
+function rolesOfDoc(a,d){ const m=docRoleMap(a), k=docKey(d); return DOC_ROLES.filter(R=>m[R[0]]===k).map(R=>R[0]); }
+function applyDocRoles(a){ const m=docRoleMap(a), rows=docRows(a), K=kalipK(a); let n=0;
+  DOC_ROLES.forEach(([role,,,keys])=>{ const key=m[role]; if(!key) return; const d=rows.find(x=>docKey(x)===key); if(!d){ delete m[role]; return; } const v=docFmt(d); keys.forEach(fk=>{ if(K[fk]!==v){ K[fk]=v; n++; } }); });
+  return n; }
+function docRolesHTML(a,d){ const sel=d?rolesOfDoc(a,d):[];
+  return `<details class="doc-roles"><summary><span class="lbl">Raporda kullanılacağı yer:</span> <span class="chips">${sel.length?sel.map(r=>`<span class="chip-r">${esc(DOC_ROLES.find(x=>x[0]===r)[1])}</span>`).join(""):`<span class="muted">seçilmedi</span>`}</span><span class="chev">${ICON.chev}</span></summary>
+    <div class="role-grid">${DOC_ROLES.map(([r,l,w])=>`<label><input type="checkbox" data-docrole="${r}"${sel.includes(r)?" checked":""}><span>${esc(l)} <small class="muted">· ${esc(w)}</small></span></label>`).join("")}</div></details>`; }
 function docRows(a){ return String(rep(a).doclist||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); return p.length>=2?{k:p[0]||"",a:p[1]||"",r:p.slice(2).join(" | ")}:{k:"",a:l,r:""}; }); }
 function docRowHTML(d,i){ return `<div class="doc-row"><span class="dn num">${i+1}</span>
   <input data-doc="k" value="${esc(d.k)}" placeholder="Kod (ör. PR-104.1.7.001)" aria-label="Doküman kodu" autocomplete="off">
   <input data-doc="a" value="${esc(d.a)}" placeholder="Doküman adı" aria-label="Doküman adı" autocomplete="off">
   <input data-doc="r" value="${esc(d.r)}" placeholder="Rev. no / tarih (ör. Rev05_29.01.2026)" aria-label="Revizyon" autocomplete="off">
-  <button type="button" class="btn doc-del" data-docdel="1" aria-label="Dokümanı sil" title="Sil">${ICON.trash}</button></div>`; }
+  <button type="button" class="btn doc-del" data-docdel="1" aria-label="Dokümanı sil" title="Sil">${ICON.trash}</button>
+  ${docRolesHTML(S.cur,d)}</div>`; }
 function docsCoverHTML(a){ if(docsMergeFromKalip(a)) touch(); const rows=docRows(a); const list=rows.length?rows:[{k:"",a:"",r:""}];
   return `<section class="group"><h2>Kuruluş dokümanları</h2>
-    <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir. Rapor sekmesindeki yorum kalıplarına yazılan dokümanlar (sözleşme formu, prosedür, talimat, iş emri, kayıt ve rapor formu vb.) da buraya kendiliğinden eklenir.</p>
+    <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir. Her dokümanın altındaki <b>“Raporda kullanılacağı yer”</b> seçimiyle doküman, Rapor sekmesindeki ilgili yorum kalıbı alanına (sözleşme formu, prosedür, talimat, iş emri formu, kayıt formu, rapor formu vb.) kendiliğinden yazılır.</p>
     <div class="doc-head"><span></span><span>Kod</span><span>Doküman adı</span><span>Revizyon no / tarihi</span><span></span></div>
     <div id="docRows">${list.map(docRowHTML).join("")}</div>
     <button type="button" class="btn" id="docAdd" style="margin-top:8px">${ICON.plus}Doküman ekle</button></section>`; }
 function docsSync(){ const a=S.cur; if(!a) return; const lines=[...document.querySelectorAll("#docRows .doc-row")].map(r=>{ const g=k=>r.querySelector(`[data-doc="${k}"]`).value.trim(); const k=g("k"),n=g("a"),v=g("r"); return (k||n||v)?[k,n,v].join(" | ").replace(/( \| )+$/,""):""; }).filter(Boolean);
-  rep(a).doclist=lines.join("\n"); document.querySelectorAll("#docRows .doc-row .dn").forEach((x,i)=>x.textContent=i+1); touch(); }
+  rep(a).doclist=lines.join("\n"); document.querySelectorAll("#docRows .doc-row .dn").forEach((x,i)=>x.textContent=i+1);
+  const m={}; document.querySelectorAll("#docRows .doc-row").forEach(r=>{ const g=k=>r.querySelector(`[data-doc="${k}"]`).value.trim(); const d={k:g("k"),a:g("a"),r:g("r")}; if(!d.k&&!d.a) return;
+    r.querySelectorAll("[data-docrole]:checked").forEach(c=>{ m[c.dataset.docrole]=docKey(d); });
+    const ch=r.querySelector(".doc-roles .chips"); if(ch){ const sel=[...r.querySelectorAll("[data-docrole]:checked")].map(c=>DOC_ROLES.find(x=>x[0]===c.dataset.docrole)[1]); ch.innerHTML=sel.length?sel.map(x=>`<span class="chip-r">${esc(x)}</span>`).join(""):`<span class="muted">seçilmedi</span>`; } });
+  rep(a).docRoles=m; applyDocRoles(a); touch(); }
 function coverHTML(){
   const a=S.cur, f=FORM_BY[a.code]; let html="", open=false;
   const others=othersOf(a);
@@ -1481,7 +1522,8 @@ function kalipHTML(a,i){
   const fi=([key,label,type,ph])=>{ const id="kf-"+i+"-"+key, v=k[key]||"";
     if(type==="area") return `<div class="wide"><label for="${id}">${esc(label)}</label><textarea id="${id}" data-rk="${key}" rows="3" placeholder="${esc(ph||"")}">${esc(v)}</textarea></div>`;
     if(type==="date") return `<div><label for="${id}">${esc(label)}</label><input id="${id}" type="date" data-rk="${key}" value="${esc(v)}"></div>`;
-    return `<div class="${type==="doc"?"wide":""}"><label for="${id}">${esc(label)}</label><input id="${id}" data-rk="${key}" value="${esc(v)}" placeholder="${esc(ph||"")}" autocomplete="off"${type==="doc"?' list="docDL"':""}></div>`; };
+    const fromCover=type==="doc"&&DOC_ROLES.some(R=>R[3].includes(key)&&docRoleMap(a)[R[0]]);
+    return `<div class="${type==="doc"?"wide":""}"><label for="${id}">${esc(label)}${fromCover?' <small class="from-cover">· Kapak’tan</small>':""}</label><input id="${id}" data-rk="${key}" value="${esc(v)}" placeholder="${esc(ph||"")}" autocomplete="off"${type==="doc"?' list="docDL"':""}></div>`; };
   return `<details class="kalip"${filled?" open":""}><summary>${ICON.doc}Doldurulabilir alanlar (formdaki yorum kalıbı)<span class="chev">${ICON.chev}</span></summary><div class="kf">${K.f.map(fi).join("")}<div class="kbtn"><button class="btn" data-kalip="${i}">Alanlardan yorumu oluştur</button><p class="hint">Yorum kutusundaki metnin yerine geçer; sonra elle düzeltebilirsiniz.</p></div></div></details>`;
 }
 function kalipGenel(a){
@@ -1494,7 +1536,7 @@ function setBulguRenk(hex){ hex=String(hex||"").replace("#","").toUpperCase(); i
   document.documentElement.style.setProperty("--bulgu","#"+hex); document.querySelectorAll("[data-brenk]").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.brenk===hex))); const ci=$("#brCustom"); if(ci) ci.value="#"+hex; const lb=$("#brLabel"); if(lb) lb.textContent=(BULGU_RENK.find(x=>x[0]===hex)||[0,"Özel renk"])[1]+" · #"+hex; }
 function bulguPart(t){ const L=String(t||"").split("\n"); const i=L.findIndex(l=>/^\s*(Bulgu\b|YD gerekçesi)/i.test(l)); return i<0?"":L.slice(i).join("\n").trim(); }
 function repHTML(){
-  const a=S.cur, r=rep(a); document.documentElement.style.setProperty("--bulgu","#"+bulguRenk(a));
+  const a=S.cur, r=rep(a); if(applyDocRoles(a)) touch(); document.documentElement.style.setProperty("--bulgu","#"+bulguRenk(a));
   const fld=(k,label,opts={})=>{ const v=repVal(a,k); const id="rp-"+k; return `<div class="field"><label for="${id}">${label}</label>${opts.area?`<textarea id="${id}" data-rep="${k}" rows="${opts.rows||3}">${esc(v)}</textarea>`:`<input id="${id}" data-rep="${k}" ${opts.type?`type="${opts.type}"`:""} value="${esc(v)}" placeholder="${esc(opts.ph||"")}" autocomplete="off">`}</div>`; };
   const info=(l,v)=>`<div class="info-row"><span>${l}</span><b>${v?esc(v):'<span class="muted">Kapak sekmesinde girilmedi</span>'}</b></div>`;
   const crit=CRITERIA.map((cr,i)=>{ const e=effRow(a,i);
@@ -2290,6 +2332,7 @@ document.addEventListener("input",e=>{
 });
 document.addEventListener("change",e=>{
   if(e.target.id==="filterSel"){ S.filter=e.target.value; renderTab(); }
+  else if(e.target.dataset && e.target.dataset.docrole){ if(e.target.checked){ document.querySelectorAll(`#docRows [data-docrole="${e.target.dataset.docrole}"]`).forEach(c=>{ if(c!==e.target) c.checked=false; }); } docsSync(); const R=DOC_ROLES.find(x=>x[0]===e.target.dataset.docrole); if(e.target.checked) toast("Rapor’da "+R[2]+" alanına yazıldı: "+R[1]); }
   else if(e.target.dataset && e.target.dataset.rk && docKeys().has(e.target.dataset.rk) && S.cur){ const n=docsMergeFromKalip(S.cur); if(n){ touch(); const dl=$("#docDL"); if(dl) dl.innerHTML=docOpts(S.cur).map(o=>`<option value="${esc(o)}"></option>`).join(""); const ta=$("#rp-doclist"); if(ta) ta.value=rep(S.cur).doclist; toast("Doküman Kapak’taki kuruluş dokümanları listesine eklendi"); } }
   else if(e.target.dataset && e.target.dataset.repchk){ rep(S.cur)[e.target.dataset.repchk]=e.target.checked; touch(); }
   else if(e.target.id==="photoInput"||e.target.id==="cameraInput"){ onPhotos([...e.target.files]); }
