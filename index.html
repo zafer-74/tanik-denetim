@@ -405,7 +405,13 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .kalip .kbtn .hint{margin:0;font-size:12.5px}
 .doc-head,.doc-row{display:grid;grid-template-columns:22px 1.1fr 2fr .8fr 1fr 40px;gap:6px;align-items:center}
 .doc-head{font-size:12px;color:var(--muted);font-weight:600;padding:0 0 4px}
-.doc-row{margin-bottom:6px}
+.doc-row,.cz-row{margin-bottom:6px}
+.cz-head,.cz-row{display:grid;grid-template-columns:22px 1.6fr 1fr 1fr 1.1fr 1fr 40px;gap:6px;align-items:center}
+.cz-head{font-size:12px;color:var(--muted);font-weight:600;padding:0 0 4px}
+.cz-row .dn{font-size:12.5px;color:var(--muted);text-align:right}
+.cz-row input{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 10px;font-size:14px}
+.cz-row input[type=date]{min-height:40px;font-family:inherit}
+.cz-row .mf{display:block;min-width:0;margin:0}.cz-row .mf>span{display:none}
 .doc-row .dn{font-size:12.5px;color:var(--muted);text-align:right}
 .doc-row input[type=date]{min-height:40px;font-family:inherit}
 .doc-row input{width:100%;min-width:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);padding:9px 10px;font-size:14px}
@@ -425,7 +431,8 @@ mark{background:color-mix(in srgb,var(--accent) 55%,transparent);color:inherit;b
 .std-pick>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--steel)}.std-pick>summary::-webkit-details-marker{display:none}.std-pick>summary svg{width:18px;height:18px;flex:none}.std-pick>summary .chev{margin-left:auto;transition:transform .15s}.std-pick[open]>summary .chev{transform:rotate(90deg)}
 .from-cover{color:var(--u);font-weight:600}
 .doc-del{min-height:38px;padding:0;width:40px;color:var(--ud)}
-@media (max-width:640px){.doc-roles{grid-column:1/-1}.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/5;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/5;align-self:start}}
+@media (max-width:640px){.cz-head{display:none}.cz-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.cz-row .dn{grid-row:1/6;align-self:start;padding-top:10px}.cz-row .mf{grid-column:2}.cz-row .mf>span{display:block;font-size:11.5px;color:var(--muted);font-weight:600;margin:0 0 2px 2px}.cz-row .doc-del{grid-column:3;grid-row:1/6;align-self:start}
+.doc-roles{grid-column:1/-1}.doc-head{display:none}.doc-row{grid-template-columns:22px 1fr 40px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px}.doc-row .dn{grid-row:1/5;align-self:start;padding-top:10px}.doc-row input{grid-column:2}.doc-row .doc-del{grid-column:3;grid-row:1/5;align-self:start}}
 .bulgu-prev{white-space:pre-wrap;font-size:13.5px;color:var(--bulgu,#C00000);background:var(--surface-2);border-radius:8px;padding:8px 10px;border-left:4px solid var(--bulgu,#C00000)}
 .bulgu-prev span{display:block;font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted);margin-bottom:2px}
 .brenk{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -1024,6 +1031,23 @@ function docRowHTML(d,i){ return `<div class="doc-row"><span class="dn num">${i+
   ${(()=>{ const iso=trToIso(d.t||""); return (d.t&&!iso)?`<input data-doc="t" value="${esc(d.t)}" placeholder="Rev. tarihi (gg.aa.yyyy)" aria-label="Revizyon tarihi" autocomplete="off">`:`<input type="date" data-doc="t" value="${iso}" aria-label="Revizyon tarihi" title="Revizyon tarihi">`; })()}
   <button type="button" class="btn doc-del" data-docdel="1" aria-label="Dokümanı sil" title="Sil">${ICON.trash}</button>
   ${docRolesHTML(S.cur,d)}</div>`; }
+function czRows(a){ return String(kalipK(a).cihazlar||"").split("\n").map(l=>l.trim()).filter(Boolean).map(czParse); }
+function czRowHTML(c,i){ const iso=trToIso(c.tar||"");
+  return `<div class="cz-row"><span class="dn num">${i+1}</span>
+  <label class="mf"><span>Cihaz / ekipman adı</span><input data-cz="ad" value="${esc(c.ad)}" placeholder="Cihaz / ekipman adı (ör. Dinamometre)" aria-label="Cihaz / ekipman adı" autocomplete="off"></label>
+  <label class="mf"><span>Kodu</span><input data-cz="kod" value="${esc(c.kod)}" placeholder="Kodu / seri no" aria-label="Cihaz kodu" autocomplete="off"></label>
+  <label class="mf"><span>Kalibrasyon tarihi</span>${(c.tar&&!iso)?`<input data-cz="tar" value="${esc(c.tar)}" placeholder="Kalibrasyon tarihi (gg.aa.yyyy)" aria-label="Kalibrasyon tarihi" autocomplete="off">`:`<input type="date" data-cz="tar" value="${iso}" aria-label="Kalibrasyon tarihi" title="Kalibrasyon tarihi">`}</label>
+  <label class="mf"><span>Lab. akreditasyon no</span><input data-cz="lab" value="${esc(c.lab)}" placeholder="Lab. akreditasyon no (ör. AB-0068-K)" aria-label="Laboratuvar akreditasyon numarası" autocomplete="off"></label>
+  <label class="mf"><span>Sertifika no</span><input data-cz="sert" value="${esc(c.sert)}" placeholder="Sertifika no" aria-label="Kalibrasyon sertifika numarası" autocomplete="off"></label>
+  <button type="button" class="btn doc-del" data-czdel="1" aria-label="Cihazı sil" title="Sil">${ICON.trash}</button></div>`; }
+function czCoverHTML(a){ const rows=czRows(a); const list=rows.length?rows:[{ad:"",kod:"",sert:"",tar:"",lab:""}];
+  return `<section class="group"><h2>Kullanılan cihaz / ekipmanlar</h2>
+    <p class="hint" style="margin:0 0 8px">Muayenede kullanılan cihazları ayrı ayrı girin. Bu liste Rapor sekmesindeki <b>9. Kullanılan Cihaz/Ekipman ve Kodu</b> ile <b>10. Muayene Öncesi Kullanılacak Cihazların Uygunluğunun Kontrolü</b> yorum kalıplarına kendiliğinden yazılır (10. kriterde kalibrasyon tarihi, laboratuvar akreditasyon no ve sertifika no ile).</p>
+    <div class="cz-head"><span></span><span>Cihaz / ekipman adı</span><span>Kodu</span><span>Kalibrasyon tarihi</span><span>Lab. akreditasyon no</span><span>Sertifika no</span><span></span></div>
+    <div id="czRows">${list.map(czRowHTML).join("")}</div>
+    <button type="button" class="btn" id="czAdd" style="margin-top:8px">${ICON.plus}Cihaz ekle</button></section>`; }
+function czSync(){ const a=S.cur; if(!a) return; const lines=[...document.querySelectorAll("#czRows .cz-row")].map(r=>{ const g=k=>{ const x=r.querySelector(`[data-cz="${k}"]`); return x?x.value.trim():""; }; const c={ad:g("ad"),kod:g("kod"),sert:g("sert"),tar:isoToTr(g("tar")),lab:g("lab")}; return (c.ad||c.kod||c.sert||c.tar||c.lab)?czLine(c):""; }).filter(Boolean);
+  kalipK(a).cihazlar=lines.join("\n"); document.querySelectorAll("#czRows .cz-row .dn").forEach((x,i)=>x.textContent=i+1); touch(); }
 function docsCoverHTML(a){ if(docsMergeFromKalip(a)) touch(); if(autoRoles(a)){ applyDocRoles(a); touch(); } const rows=docRows(a); const list=rows.length?rows:[{k:"",a:"",r:""}];
   return `<section class="group"><h2>Kuruluş dokümanları</h2>
     <p class="hint" style="margin:0 0 8px">Rapor sayfasında atıf yapılacak prosedür, talimat ve formları ayrı ayrı girin. Bu liste Rapor sekmesindeki doküman listesiyle ortaktır; yorum kalıplarında seçilebilir ve F701-056’daki “Standartlar / kuruluş içi dokümanlar” alanına eklenir. Her dokümanın altındaki <b>“Raporda kullanılacağı yer”</b> kodu ve adına göre otomatik işaretlenir (<i>öneri</i>); gerekirse düzeltin. Seçilen doküman, Rapor sekmesindeki ilgili yorum kalıbı alanına (sözleşme formu, prosedür, talimat, iş emri formu, kayıt formu, rapor formu vb.) kendiliğinden yazılır.</p>
@@ -1057,6 +1081,7 @@ function coverHTML(){
     if(x.row===11) html+=`<div class="field"><label for="cvDenNo">Denetim No</label><input id="cvDenNo" data-rep="denetimNo" value="${esc(rep(a).denetimNo||"")}" placeholder="TÜRKAK denetim numarası" autocomplete="off"></div>`;
   });
   if(open) html+="</div></section>";
+  html+=czCoverHTML(a);
   html+=docsCoverHTML(a);
   return html + `<p class="hint">${esc(f.method)}</p>`;
 }
@@ -1514,8 +1539,12 @@ function thumbsFor(no){ const ph=S.photos.filter(p=>p.itemNo===no); return ph.le
 /* ================= F701-056 doldurulabilir kalıplar (yorum cümleleri) ================= */
 function docOpts(a){ return String(rep(a).doclist||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); return p.length>=2?docFmt(splitRev({k:p[0],a:p[1],r:p[2]||"",t:p.slice(3).join(" ")})):l; }); }
 const trD=v=>/^\d{4}-\d{2}-\d{2}$/.test(v||"")?isoToTr(v):(v||"");
-const cihazSatir=(v,withCal)=>String(v||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const p=l.split("|").map(x=>x.trim()); const ad=p[0]||"", sn=p[1]||"", sert=p[2]||"", tar=p[3]||"";
-  return ad+(sn?" (Seri No: "+sn+")":"")+(withCal&&(sert||tar)?" ("+[sert,tar].filter(Boolean).join(", ")+")":""); }).join(" / ");
+// cihazlar satırı: Ad | Kod/Seri No | Sertifika no | Kalibrasyon tarihi | Laboratuvar akreditasyon no
+const czParse=l=>{ const p=String(l||"").split("|").map(x=>x.trim()); return {ad:p[0]||"",kod:p[1]||"",sert:p[2]||"",tar:p[3]||"",lab:p[4]||""}; };
+const czLine=c=>[c.ad,c.kod,c.sert,c.tar,c.lab].join(" | ").replace(/( \| )+$/,"");
+const cihazSatir=(v,withCal)=>String(v||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{ const c=czParse(l);
+  const det=withCal?[c.tar?"kalibrasyon tarihi "+c.tar:"", c.lab?"laboratuvar akreditasyon no "+c.lab:"", c.sert?"sertifika no "+c.sert:""].filter(Boolean):[];
+  return c.ad+(c.kod?" (Kodu: "+c.kod+")":"")+(det.length?" ("+det.join(", ")+")":""); }).join(" / ");
 const bulguEk=(k,i)=>{ const no=(k["b"+i+"no"]||"").trim(), t=(k["b"+i+"t"]||"").trim(); return t?"\n"+(no?"Bulgu "+no+":":"Bulgu:")+"\n"+t:""; };
 const KALIP=[
  {f:[["teklifTarih","Teklif/sözleşme tarihi","date"],["teklifNo","Teklif/sözleşme no","text","260109011-AKV-P-R00"],["teklifForm","Teklif/sözleşme formu (kod, ad, rev.)","doc","FR-101.0.0.029 Teklif/Sözleşme Formu (Rev19_17.01.2025)"],["isgId","İSG-KATİP sözleşme ID","text","23559324"],["isgBas","İSG-KATİP başlangıç","date"],["isgBit","İSG-KATİP bitiş","date"]],
@@ -1537,9 +1566,9 @@ const KALIP=[
   b:k=>[`Müşteri tarafından muayene öncesi hazırlanacak önlemler ${[k.hazTalimat,k.hazForm?k.hazForm+(k.hazMadde?" madde "+k.hazMadde+"’de":""):""].filter(Boolean).join(" ve ")||"kuruluş dokümanlarında"}${k.hazGenel?" "+k.hazGenel+"de":""} tanımlanmıştır. Sahada uygulandığı görüldü.`]},
  {f:[["hasarProsedur","Önleyici tedbirleri tanımlayan prosedür","doc"],["hasarMadde","Madde","text","4.1.4"]],
   b:k=>[`${k.hasarProsedur?k.hasarProsedur+(k.hasarMadde?" madde "+k.hasarMadde:"")+" içeriğinde":"Kuruluş dokümanlarında"} muayeneden geçirilecek ilgili muayene kontrolleri kendi sorumluluğunda iken bunların bozulmasını veya hasar görmesini önlemek için önleyici tedbirleri tanımladığı görüldü. Sahada gerekli önlemlerin alındığı görülmüştür.`]},
- {f:[["cihazlar","Cihazlar — her satıra: Ad | Seri No | Sertifika no | Kalibrasyon tarihi","area","Şeritmetre | 5.1.19-010 | AB-0068-K | 22.07.2025\nDinamometre | 5.1.28-001 | AB-0068-K | 19.06.2026"]],
+ {f:[["cihazlar","Cihazlar (Kapak ile ortak) — her satıra: Ad | Kod | Sertifika no | Kalibrasyon tarihi | Lab. akreditasyon no","area","Şeritmetre | 5.1.19-010 | K-2025-118 | 22.07.2025 | AB-0068-K\nDinamometre | 5.1.28-001 | K-2026-044 | 19.06.2026 | AB-0068-K"]],
   b:k=>[cihazSatir(k.cihazlar,false)]},
- {f:[["kalProsedur","Kalibrasyon/doğrulama prosedürü","doc","PR-101.0.0.014 Ölçme Ve Test Cihazlarının Kalibrasyon Ve Doğrulama Prosedürü (Rev11_03.02.2025)"],["cihazlar","Cihazlar (8. kriterle ortak) — Ad | Seri No | Sertifika no | Kalibrasyon tarihi","area"]],
+ {f:[["kalProsedur","Kalibrasyon/doğrulama prosedürü","doc","PR-101.0.0.014 Ölçme Ve Test Cihazlarının Kalibrasyon Ve Doğrulama Prosedürü (Rev11_03.02.2025)"],["cihazlar","Cihazlar (Kapak ve 9. kriterle ortak) — Ad | Kod | Sertifika no | Kalibrasyon tarihi | Lab. akreditasyon no","area"]],
   b:k=>[`Kuruluş ${k.kalProsedur?k.kalProsedur+"’ne":"kalibrasyon ve doğrulama prosedürüne"} göre muayene öncesi kullanılacak cihazların uygunluk kontrolü yapmaktadır.`, cihazSatir(k.cihazlar,true)]},
  {f:[["tarafForm","Tarafsızlık taahhütnamesi","doc","FR-101.0.0.067 Personel Gizlilik, Tarafsızlık ve Bağımsızlık Taahhütnamesi (Rev04_21.02.2024)"],["tarafImza","İmzalayanlar — her satıra: Ad Soyad | Tarih","area","Burak Güler | 01.10.2025"]],
   b:k=>["Muayene personelinin, muayene faaliyetini tarafsız olarak yaptığı görülmüştür.",
@@ -2189,14 +2218,14 @@ function repaintCoverKeep(){ const y=window.scrollY; renderTab(); window.scrollT
 
 /* ================= kapak bilgilerini kopyalama ================= */
 const COPY_GROUPS=[
-  {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"},{k:"r:doclist",label:"Kuruluş dokümanları"}]},
+  {id:"den",title:"Denetim bilgileri",fields:[...[7,9,10,11].map(r=>({k:"c"+r,row:r})),{k:"r:denetimNo",label:"Denetim No"},{k:"r:doclist",label:"Kuruluş dokümanları"},{k:"k:cihazlar",label:"Kullanılan cihaz / ekipmanlar"}]},
   {id:"ens",title:"Denetlenen enspektör",fields:[{k:"e:list",label:"Enspektör(ler) – ad, ünvan, EKİPNET, yetkilendirme tarihi"}]},
   {id:"rap",title:"Rapor başlığı ve imzalar (F701-056)",fields:[{k:"r:dosyaNo",label:"Dosya No"},{k:"t:tanik",label:"Tanık denetçisi"},{k:"r:lider",label:"Ekip lideri / denetçi"}]}
 ];
 const ALL_FIELDS=COPY_GROUPS.flatMap(g=>g.fields);
 function fLabel(f){ if(f.row){ const x=FORMS[0].cover.find(c=>c.row===f.row); return x?x.label:""; } return f.label; }
-function fGet(a,f,raw){ if(f.row) return a.cover[f.row]||""; const [t,k]=f.k.split(":"); if(t==="t") return a[k]||""; if(t==="e") return ensSorted(a).map(e=>e.ad||"(adsız)").join(", "); const r=rep(a); if(raw) return r[k]||""; return (k==="lider")?(r[k]||""):(r[k]||""); }
-function fSet(a,f,v){ if(f.row) a.cover[f.row]=v; else { const [t,k]=f.k.split(":"); if(t==="t") a[k]=v; else rep(a)[k]=v; } }
+function fGet(a,f,raw){ if(f.row) return a.cover[f.row]||""; const [t,k]=f.k.split(":"); if(t==="t") return a[k]||""; if(t==="k") return kalipK(a)[k]||""; if(t==="e") return ensSorted(a).map(e=>e.ad||"(adsız)").join(", "); const r=rep(a); if(raw) return r[k]||""; return (k==="lider")?(r[k]||""):(r[k]||""); }
+function fSet(a,f,v){ if(f.row) a.cover[f.row]=v; else { const [t,k]=f.k.split(":"); if(t==="t") a[k]=v; else if(t==="k") kalipK(a)[k]=v; else rep(a)[k]=v; } }
 function fShow(f,v){ return f.row&&DATE_ROWS[f.row]?isoToTr(v):v; }
 function copyInto(src,dst,keys,overwrite){ let n=0; ALL_FIELDS.forEach(f=>{ if(!keys.has(f.k)) return; const v=fGet(src,f); if(!v) return; const cur=fGet(dst,f,true);
     if(f.k==="e:list"){ const same=JSON.stringify(ensSorted(src))===JSON.stringify(ensSorted(dst)); if(same || (cur && !overwrite)) return; dst.ensp=JSON.parse(JSON.stringify(ensSorted(src))); ensSync(dst); n++; return; }
@@ -2319,6 +2348,8 @@ document.addEventListener("click",async e=>{
   if(d.kalip!==undefined){ const i=+d.kalip; const txt=kalipText(S.cur,i); const rr=rep(S.cur).rows[i]||(rep(S.cur).rows[i]={}); rr.c=txt; if(i===4&&!rr.s) rr.s="UD"; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast((i+1)+". kriterin yorumu alanlardan oluşturuldu"); return; }
   if(d.brenk){ setBulguRenk(d.brenk); return; }
   if(t.id==="docAdd"){ const box=$("#docRows"); if(!box) return; const n=box.querySelectorAll(".doc-row").length; box.insertAdjacentHTML("beforeend",docRowHTML({k:"",a:"",r:""},n)); box.lastElementChild.querySelector("input").focus(); return; }
+  if(t.id==="czAdd"){ const box=$("#czRows"); if(!box) return; const n=box.querySelectorAll(".cz-row").length; box.insertAdjacentHTML("beforeend",czRowHTML({ad:"",kod:"",sert:"",tar:"",lab:""},n)); box.lastElementChild.querySelector("input").focus(); return; }
+  if(d.czdel){ const row=t.closest(".cz-row"), box=$("#czRows"); if(row&&box){ if(box.querySelectorAll(".cz-row").length>1) row.remove(); else row.querySelectorAll("input").forEach(i=>i.value=""); czSync(); } return; }
   if(d.docdel){ const row=t.closest(".doc-row"), box=$("#docRows"); if(row&&box){ if(box.querySelectorAll(".doc-row").length>1) row.remove(); else row.querySelectorAll("input").forEach(i=>i.value=""); docsSync(); } return; }
   if(d.kgenel){ rep(S.cur).genel=kalipGenel(S.cur); touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); toast("Genel değerlendirme kalıptan oluşturuldu"); return; }
   if(d.greset){ delete rep(S.cur).genel; touch(); const y=window.scrollY; renderTab(); window.scrollTo(0,y); return; }
@@ -2380,6 +2411,7 @@ document.addEventListener("input",e=>{
   else if(el.dataset.top){ S.cur[el.dataset.top]=el.value; touch(); }
   else if(el.dataset.rep){ rep(S.cur)[el.dataset.rep]=el.value; touch(); }
   else if(el.dataset.doc){ docsSync(); }
+  else if(el.dataset.cz){ czSync(); }
   else if(el.id==="brCustom"){ setBulguRenk(el.value); }
   else if(el.dataset.rk){ kalipK(S.cur)[el.dataset.rk]=el.value; document.querySelectorAll('[data-rk="'+el.dataset.rk+'"]').forEach(o=>{ if(o!==el) o.value=el.value; }); touch(); }
   else if(el.dataset.rc!==undefined){ const rr=rep(S.cur).rows[+el.dataset.rc]||(rep(S.cur).rows[+el.dataset.rc]={}); rr.c=el.value; touch(); const bp=$("#bp-"+el.dataset.rc); if(bp){ const t=bulguPart(el.value); bp.hidden=!t; bp.innerHTML="<span>Word raporunda kırmızı yazılacak bulgu:</span>"+esc(t); } }
