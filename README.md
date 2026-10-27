@@ -6,7 +6,7 @@ ana ekrana eklenir; tam ekran açılır ve internet olmadan da çalışır.
 ## Klasördeki dosyalar
 | Dosya | Görevi |
 |---|---|
-| index.html | Uygulamanın kendisi (61 çeklist: 43 kaldırma-iletme, 8 basınçlı kap, 6 kazan, 4 asansör periyodik kontrol – EK-5/A, EK-5/B, EK-6/A, EK-6/B; Excel ve F701-056 şablonları içinde) |
+| index.html | Uygulamanın kendisi (64 çeklist: 43 kaldırma-iletme, 8 basınçlı kap, 6 kazan, 4 asansör periyodik kontrol – EK-5/A, EK-5/B, EK-6/A, EK-6/B, 3 baca; Excel ve F701-056 şablonları içinde) |
 | sw.js | Çevrimdışı çalışmayı sağlar |
 | manifest.webmanifest | Uygulama adı, simge ve tam ekran ayarı |
 | exceljs.min.js, jszip.min.js | Excel ve Word dosyası üretimi (internet gerekmeden) |
@@ -157,3 +157,19 @@ Teleferik, telesiyej ve teleski çeklistlerine **Bölüm F – Yabancı mevzuat 
 (Avusturya SeilbG/SeilbÜV 2013/SchleppVO, Almanya, Fransa, İtalya, İsviçre, ABD ANSI B77.1, AB 2016/424) eklendi
 (teleferik 23, telesiyej 22, teleski 22 madde). Bölüm F bağlayıcıdır: U / UD / G / KD ile değerlendirilir, toplam ve uygunluk
 oranına dahildir. Excel çıktısında Kapak özetine F satırı ve **Ülke Karşılaştırma** sayfası eklenmiştir.
+
+## 8. Baca muayene alanı çeklistleri (21.A.1, 21.B.1, 21.C.1)
+Ana ekranda **21 Bacalar** grubu altında üç çeklist bulunur:
+- **21.A.1 Baca Periyodik Muayenesi** – 40 madde, 6 bölüm (A Muayene süreci · B Tesis/cihaz/baca verileri · C Cihaz mahalli ve bağlantı ·
+  D Güzergâh, yerleşim, yapısal durum · E Çekiş hesabının doğrulanması · Z Kayıt ve raporlama)
+- **21.B.1 Baca Sızdırmazlık Kontrolü** – 28 madde, 6 bölüm (A · B Test öncesi hazırlık · C Basınç sınıfı ve deney şartları ·
+  D Testin yürütülmesi · E Sızdırmazlığa özgü raporlama · Z)
+- **21.C.1 Baca Proje ve Montaj Uygunluk Muayenesi** – 53 madde, 7 bölüm (A · B Proje ve hesap dosyası · C Saha doküman/etiket ·
+  D Montajın projeye uygunluğu · E Cihaz mahalli ve güzergâh · F Montaj detayları ve bileşenler · Z)
+
+Madde numaraları Word kontrol listeleriyle aynıdır (bölüm harfi + madde no, ör. **D17**); atıflar yalnızca standartlaradır
+(TS EN 1443, TS EN 15287-1/-2, TS EN 13384-1/-2, TS EN 13084-1, TS EN 1856-1, TS 7363, TS EN ISO/IEC 17020).
+Word listesindeki **UY (Uygulanamaz)** uygulamada **KD (Kapsam Dışı)** ile işaretlenir. Kapakta "Tanık Olunan Baca" bölümü
+(baca tipi / kısa gösteriliş, imalatçı, etiket no, basınç-sıcaklık sınıfı, ölçüler, yakıcı cihaz, hesap standardı) bulunur;
+F701-056 raporunda muayene türü otomatik olarak *Periyodik muayene / Sızdırmazlık kontrolü / Proje ve montaj uygunluk muayenesi* yazılır.
+Alan/tür bazındaki Excel listesinde bu denetimler **Bacalar** alanı altında gruplanır.
